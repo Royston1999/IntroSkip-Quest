@@ -1,0 +1,18 @@
+{
+	"_QPVersion": "0.1.1",
+	"name": "Intro Skip",
+	"id": "IntroSkip",
+	"author": "Polly51104",
+	"version": "0.1.0",
+	"packageId": "com.beatgames.beatsaber",
+	"packageVersion": "1.17.1",
+	"description": "skip the intro and outro of maps",
+	"dependencies": [],
+	"modFiles": [
+		"libIntroSkip.so"
+	],
+	"libraryFiles": [
+		"libbeatsaber-hook_2_3_2.so"
+	],
+	"fileCopies": []
+}
