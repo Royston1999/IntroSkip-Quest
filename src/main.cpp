@@ -91,18 +91,22 @@ void CalculateSkipTimePairs(IReadonlyBeatmapData* data){
             }
         }
     }
-    std::sort(mapValues.begin(), mapValues.end(), [](auto &left, auto &right) { return left < right; });
-    float currentTime = mapValues[0];
-    skipTimePairs.clear(); std::vector<std::pair<float, float>>().swap(skipTimePairs); 
-    if (getIntroSkipConfig().skipIntro.GetValue()) if (currentTime > getIntroSkipConfig().minSkipTime.GetValue()) skipTimePairs.push_back(std::make_pair(0.1f, currentTime - 1.5f));
-    if (getIntroSkipConfig().skipMiddle.GetValue()){
-        for (auto& time : mapValues){
-            if (time - currentTime > getIntroSkipConfig().minSkipTime.GetValue()) skipTimePairs.push_back(std::make_pair(currentTime, time - 1.5f));
-            currentTime = time;
+    if (mapValues.empty()) skipTimePairs.push_back(std::make_pair(0.1f, songLength - 0.5f));
+    else {
+        std::sort(mapValues.begin(), mapValues.end(), [](auto &left, auto &right) { return left < right; });
+        float currentTime = mapValues[0], skipIntro = getIntroSkipConfig().skipIntro.GetValue(), skipMiddle = getIntroSkipConfig().skipMiddle.GetValue(), 
+        skipOutro = getIntroSkipConfig().skipOutro.GetValue(), minSkipTime = getIntroSkipConfig().minSkipTime.GetValue();
+        skipTimePairs.clear(); std::vector<std::pair<float, float>>().swap(skipTimePairs); 
+        if (skipIntro && currentTime > minSkipTime) skipTimePairs.push_back(std::make_pair(0.1f, currentTime - 1.5f));
+        if (skipMiddle){
+            for (auto& time : mapValues){
+                if (time - currentTime > minSkipTime) skipTimePairs.push_back(std::make_pair(currentTime, time - 1.5f));
+                currentTime = time;
+            }
         }
+        if (skipOutro && songLength - mapValues.back() > minSkipTime) skipTimePairs.push_back(std::make_pair(mapValues.back(), songLength - 0.5f));
+        mapValues.clear(); std::vector<float>().swap(mapValues);
     }
-    if (getIntroSkipConfig().skipOutro.GetValue()) if(songLength - mapValues.back() > getIntroSkipConfig().minSkipTime.GetValue()) skipTimePairs.push_back(std::make_pair(mapValues.back(), songLength - 0.5f));
-    mapValues.clear(); std::vector<float>().swap(mapValues); 
 }
 
 TMPro::TextMeshProUGUI* CreateSkipText(){
