@@ -19,10 +19,8 @@
 #include "GlobalNamespace/NoteData.hpp"
 #include "GlobalNamespace/SliderData.hpp"
 #include "GlobalNamespace/AudioTimeSyncController.hpp"
-#include "GlobalNamespace/VRControllersInputManager.hpp"
 #include "GlobalNamespace/ComboUIController.hpp"
 #include "GlobalNamespace/VRController.hpp"
-#include "GlobalNamespace/GameSongController.hpp"
 #include "GlobalNamespace/BeatmapCallbacksController.hpp"
 #include "GlobalNamespace/BeatmapCallbacksController_InitData.hpp"
 
