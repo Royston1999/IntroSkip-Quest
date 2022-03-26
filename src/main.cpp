@@ -23,6 +23,7 @@
 #include "GlobalNamespace/VRController.hpp"
 #include "GlobalNamespace/BeatmapCallbacksController.hpp"
 #include "GlobalNamespace/BeatmapCallbacksController_InitData.hpp"
+#include "GlobalNamespace/MultiplayerLocalActiveClient.hpp"
 
 #include "HMUI/ViewController.hpp"
 
@@ -65,7 +66,7 @@ extern "C" void setup(ModInfo& info) {
 
 std::vector<std::pair<float, float>> skipTimePairs;
 std::vector<std::pair<float, float>>::iterator skipItr;
-bool currentlySkippable;
+bool currentlySkippable, isMulti;
 float songLength, lTriggerVal, rTriggerVal;
 TMPro::TextMeshProUGUI* skipText = nullptr;
 
@@ -121,7 +122,7 @@ MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(GameplayCoreSceneSetupData_ctor, "", "Gamep
 {
     GameplayCoreSceneSetupData_ctor(self, difficultyBeatmap, previewBeatmapLevel, gameplayModifiers, playerSpecificSettings, practiceSettings, useTestNoteCutSoundEffects, environmentInfo, colorScheme, mainSettingsModel);
     songLength = previewBeatmapLevel->get_songDuration();
-    skipText = nullptr; currentlySkippable = false;
+    skipText = nullptr; currentlySkippable = false; isMulti = false;
 }
 
 MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(BeatmapData_Init, "", "BeatmapCallbacksController", ".ctor", void, BeatmapCallbacksController* self, BeatmapCallbacksController::InitData* initData)
@@ -133,7 +134,7 @@ MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(BeatmapData_Init, "", "BeatmapCallbacksCont
 
 MAKE_HOOK_MATCH(SongUpdate, &AudioTimeSyncController::Update, void, AudioTimeSyncController* self) {
     SongUpdate(self);
-    if (getIntroSkipConfig().isEnabled.GetValue()){
+    if (getIntroSkipConfig().isEnabled.GetValue() && !isMulti){
         if (skipItr != skipTimePairs.end()){
             float currentTime = self->dyn__songTime();
             if (skipItr->first < currentTime && !currentlySkippable){
@@ -164,6 +165,11 @@ MAKE_HOOK_MATCH(ControllerUpdate, &VRController::Update, void, VRController* sel
     ControllerUpdate(self);
 }
 
+MAKE_HOOK_MATCH(isMultiplayer, &MultiplayerLocalActiveClient::Start, void, MultiplayerLocalActiveClient* self){
+    isMultiplayer(self);
+    isMulti = true;
+}
+
 void DidActivate(HMUI::ViewController* self, bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling){
     if(firstActivation) 
     {
@@ -191,5 +197,6 @@ extern "C" void load() {
     INSTALL_HOOK(getLogger(), SongUpdate);
     INSTALL_HOOK(getLogger(), ControllerUpdate);
     INSTALL_HOOK(getLogger(), BeatmapData_Init);
+    INSTALL_HOOK(getLogger(), isMultiplayer);
     getLogger().info("Installed all hooks!");
 }
