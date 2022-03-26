@@ -117,6 +117,7 @@ MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(GameplayCoreSceneSetupData_ctor, "", "Gamep
 {
     GameplayCoreSceneSetupData_ctor(self, difficultyBeatmap, previewBeatmapLevel, gameplayModifiers, playerSpecificSettings, practiceSettings, useTestNoteCutSoundEffects, environmentInfo, colorScheme, mainSettingsModel);
     songLength = previewBeatmapLevel->get_songDuration();
+    skipText = nullptr;
 }
 
 MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(BeatmapData_Init, "", "BeatmapCallbacksController", ".ctor", void, BeatmapCallbacksController* self, BeatmapCallbacksController::InitData* initData)
@@ -133,7 +134,7 @@ MAKE_HOOK_MATCH(SongUpdate, &AudioTimeSyncController::Update, void, AudioTimeSyn
             float currentTime = self->dyn__songTime();
             if (skipItr->first < currentTime && !currentlySkippable){
                 currentlySkippable = true;
-                skipText = CreateSkipText();
+                if (skipText == nullptr) skipText = CreateSkipText();
                 skipText->get_gameObject()->set_active(true);
             }
             else if (skipItr->second < currentTime && currentlySkippable){
@@ -141,7 +142,7 @@ MAKE_HOOK_MATCH(SongUpdate, &AudioTimeSyncController::Update, void, AudioTimeSyn
                 currentlySkippable = false;
                 skipText->get_gameObject()->set_active(false);
             }
-            else if (currentlySkippable && lTriggerVal > 0.85 && rTriggerVal > 0.85){
+            else if (currentlySkippable && lTriggerVal > 0.85 && rTriggerVal > 0.85 && self->dyn__state() == 0){
                 self->dyn__audioSource()->set_time(skipItr->second);
                 skipItr++;
                 currentlySkippable = false;
