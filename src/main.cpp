@@ -22,6 +22,9 @@
 #include "GlobalNamespace/VRControllersInputManager.hpp"
 #include "GlobalNamespace/ComboUIController.hpp"
 #include "GlobalNamespace/VRController.hpp"
+#include "GlobalNamespace/GameSongController.hpp"
+#include "GlobalNamespace/BeatmapCallbacksController.hpp"
+#include "GlobalNamespace/BeatmapCallbacksController_InitData.hpp"
 
 #include "HMUI/ViewController.hpp"
 
@@ -31,14 +34,14 @@
 
 #include "TMPro/TextMeshProUGUI.hpp"
 
-#include "System/Threading/Tasks/Task_1.hpp"
-
 using namespace GlobalNamespace;
 using namespace UnityEngine::XR;
 using namespace UnityEngine;
 
-static ModInfo modInfo; // Stores the ID and version of our mod, and is sent to the modloader upon startup
 DEFINE_CONFIG(IntroSkipConfig);
+
+static ModInfo modInfo; // Stores the ID and version of our mod, and is sent to the modloader upon startup
+
 // Loads the config from disk using our modInfo, then returns it for use
 Configuration& getConfig() {
     static Configuration config(modInfo);
@@ -64,14 +67,13 @@ extern "C" void setup(ModInfo& info) {
 
 std::vector<std::pair<float, float>> criticalTimeValues;
 std::vector<std::pair<float, float>>::iterator skipItr;
-bool currentlySkippable, dataCollected;
-System::Threading::Tasks::Task_1<IReadonlyBeatmapData*>* getMapData;
+bool currentlySkippable;
 float songLength, lTriggerVal, rTriggerVal;
 TMPro::TextMeshProUGUI* skipText = nullptr;
 
 float LerpUnclamped(float a, float b, float t) {return a + (b - a) * t;}
 
-std::vector<std::pair<float, float>> CalculateCritialTimeValues(IReadonlyBeatmapData* data){
+void CalculateCritialTimeValues(IReadonlyBeatmapData* data){
     std::vector<float> mapValues;
     auto* notes = List<NoteData*>::New_ctor(); notes->AddRange(data->GetBeatmapDataItems<NoteData*>());
     auto* sliders = List<SliderData*>::New_ctor(); sliders->AddRange(data->GetBeatmapDataItems<SliderData*>());
@@ -93,17 +95,16 @@ std::vector<std::pair<float, float>> CalculateCritialTimeValues(IReadonlyBeatmap
     }
     std::sort(mapValues.begin(), mapValues.end(), [](auto &left, auto &right) { return left < right; });
     float currentTime = mapValues[0];
-    std::vector<std::pair<float, float>> skippables;
-    if (getIntroSkipConfig().skipIntro.GetValue()) if (currentTime > getIntroSkipConfig().minSkipTime.GetValue()) skippables.push_back(std::make_pair(0.1f, currentTime - 1.5f));
+    criticalTimeValues.clear(); std::vector<std::pair<float, float>>().swap(criticalTimeValues); 
+    if (getIntroSkipConfig().skipIntro.GetValue()) if (currentTime > getIntroSkipConfig().minSkipTime.GetValue()) criticalTimeValues.push_back(std::make_pair(0.1f, currentTime - 1.5f));
     if (getIntroSkipConfig().skipMiddle.GetValue()){
         for (auto& time : mapValues){
-            if (time - currentTime > getIntroSkipConfig().minSkipTime.GetValue()) skippables.push_back(std::make_pair(currentTime, time - 1.5f));
+            if (time - currentTime > getIntroSkipConfig().minSkipTime.GetValue()) criticalTimeValues.push_back(std::make_pair(currentTime, time - 1.5f));
             currentTime = time;
         }
     }
-    if (getIntroSkipConfig().skipOutro.GetValue()) if(songLength - mapValues.back() > getIntroSkipConfig().minSkipTime.GetValue()) skippables.push_back(std::make_pair(mapValues.back(), songLength - 0.5f));
+    if (getIntroSkipConfig().skipOutro.GetValue()) if(songLength - mapValues.back() > getIntroSkipConfig().minSkipTime.GetValue()) criticalTimeValues.push_back(std::make_pair(mapValues.back(), songLength - 0.5f));
     mapValues.clear(); std::vector<float>().swap(mapValues); 
-    return skippables;
 }
 
 TMPro::TextMeshProUGUI* CreateSkipText(){
@@ -118,19 +119,18 @@ MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(GameplayCoreSceneSetupData_ctor, "", "Gamep
 {
     GameplayCoreSceneSetupData_ctor(self, difficultyBeatmap, previewBeatmapLevel, gameplayModifiers, playerSpecificSettings, practiceSettings, useTestNoteCutSoundEffects, environmentInfo, colorScheme, mainSettingsModel);
     songLength = previewBeatmapLevel->get_songDuration();
-    dataCollected = false;
-    getMapData = self->GetTransformedBeatmapDataAsync();
+}
+
+MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(BeatmapData_Init, "", "BeatmapCallbacksController", ".ctor", void, BeatmapCallbacksController* self, BeatmapCallbacksController::InitData* initData)
+{
+    BeatmapData_Init(self, initData);
+    CalculateCritialTimeValues(initData->dyn_beatmapData());
+    skipItr = criticalTimeValues.begin();
 }
 
 MAKE_HOOK_MATCH(SongUpdate, &AudioTimeSyncController::Update, void, AudioTimeSyncController* self) {
     SongUpdate(self);
     if (getIntroSkipConfig().isEnabled.GetValue()){
-        if (!dataCollected){
-            if (!getMapData->get_IsCompleted()) return;
-            criticalTimeValues = CalculateCritialTimeValues(getMapData->get_ResultOnSuccess());
-            skipItr = criticalTimeValues.begin();
-            dataCollected = true;
-        }
         if (skipItr != criticalTimeValues.end()){
             float currentTime = self->dyn__songTime();
             if (skipItr->first < currentTime && !currentlySkippable){
@@ -187,5 +187,6 @@ extern "C" void load() {
     INSTALL_HOOK(getLogger(), GameplayCoreSceneSetupData_ctor);
     INSTALL_HOOK(getLogger(), SongUpdate);
     INSTALL_HOOK(getLogger(), ControllerUpdate);
+    INSTALL_HOOK(getLogger(), BeatmapData_Init);
     getLogger().info("Installed all hooks!");
 }
