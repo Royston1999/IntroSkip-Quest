@@ -63,7 +63,7 @@ extern "C" void setup(ModInfo& info) {
     getLogger().info("Completed setup!");
 }
 
-std::vector<std::pair<float, float>> criticalTimeValues;
+std::vector<std::pair<float, float>> skipTimePairs;
 std::vector<std::pair<float, float>>::iterator skipItr;
 bool currentlySkippable;
 float songLength, lTriggerVal, rTriggerVal;
@@ -71,7 +71,7 @@ TMPro::TextMeshProUGUI* skipText = nullptr;
 
 float LerpUnclamped(float a, float b, float t) {return a + (b - a) * t;}
 
-void CalculateCritialTimeValues(IReadonlyBeatmapData* data){
+void CalculateSkipTimePairs(IReadonlyBeatmapData* data){
     std::vector<float> mapValues;
     auto* notes = List<NoteData*>::New_ctor(); notes->AddRange(data->GetBeatmapDataItems<NoteData*>());
     auto* sliders = List<SliderData*>::New_ctor(); sliders->AddRange(data->GetBeatmapDataItems<SliderData*>());
@@ -93,15 +93,15 @@ void CalculateCritialTimeValues(IReadonlyBeatmapData* data){
     }
     std::sort(mapValues.begin(), mapValues.end(), [](auto &left, auto &right) { return left < right; });
     float currentTime = mapValues[0];
-    criticalTimeValues.clear(); std::vector<std::pair<float, float>>().swap(criticalTimeValues); 
-    if (getIntroSkipConfig().skipIntro.GetValue()) if (currentTime > getIntroSkipConfig().minSkipTime.GetValue()) criticalTimeValues.push_back(std::make_pair(0.1f, currentTime - 1.5f));
+    skipTimePairs.clear(); std::vector<std::pair<float, float>>().swap(skipTimePairs); 
+    if (getIntroSkipConfig().skipIntro.GetValue()) if (currentTime > getIntroSkipConfig().minSkipTime.GetValue()) skipTimePairs.push_back(std::make_pair(0.1f, currentTime - 1.5f));
     if (getIntroSkipConfig().skipMiddle.GetValue()){
         for (auto& time : mapValues){
-            if (time - currentTime > getIntroSkipConfig().minSkipTime.GetValue()) criticalTimeValues.push_back(std::make_pair(currentTime, time - 1.5f));
+            if (time - currentTime > getIntroSkipConfig().minSkipTime.GetValue()) skipTimePairs.push_back(std::make_pair(currentTime, time - 1.5f));
             currentTime = time;
         }
     }
-    if (getIntroSkipConfig().skipOutro.GetValue()) if(songLength - mapValues.back() > getIntroSkipConfig().minSkipTime.GetValue()) criticalTimeValues.push_back(std::make_pair(mapValues.back(), songLength - 0.5f));
+    if (getIntroSkipConfig().skipOutro.GetValue()) if(songLength - mapValues.back() > getIntroSkipConfig().minSkipTime.GetValue()) skipTimePairs.push_back(std::make_pair(mapValues.back(), songLength - 0.5f));
     mapValues.clear(); std::vector<float>().swap(mapValues); 
 }
 
@@ -122,14 +122,14 @@ MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(GameplayCoreSceneSetupData_ctor, "", "Gamep
 MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(BeatmapData_Init, "", "BeatmapCallbacksController", ".ctor", void, BeatmapCallbacksController* self, BeatmapCallbacksController::InitData* initData)
 {
     BeatmapData_Init(self, initData);
-    CalculateCritialTimeValues(initData->dyn_beatmapData());
-    skipItr = criticalTimeValues.begin();
+    CalculateSkipTimePairs(initData->dyn_beatmapData());
+    skipItr = skipTimePairs.begin();
 }
 
 MAKE_HOOK_MATCH(SongUpdate, &AudioTimeSyncController::Update, void, AudioTimeSyncController* self) {
     SongUpdate(self);
     if (getIntroSkipConfig().isEnabled.GetValue()){
-        if (skipItr != criticalTimeValues.end()){
+        if (skipItr != skipTimePairs.end()){
             float currentTime = self->dyn__songTime();
             if (skipItr->first < currentTime && !currentlySkippable){
                 currentlySkippable = true;
