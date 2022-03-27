@@ -18,6 +18,7 @@
 #include "GlobalNamespace/IReadonlyBeatmapData.hpp"
 #include "GlobalNamespace/NoteData.hpp"
 #include "GlobalNamespace/SliderData.hpp"
+#include "GlobalNamespace/ObstacleData.hpp"
 #include "GlobalNamespace/AudioTimeSyncController.hpp"
 #include "GlobalNamespace/ComboUIController.hpp"
 #include "GlobalNamespace/VRController.hpp"
@@ -30,6 +31,8 @@
 #include "UnityEngine/AudioSource.hpp"
 #include "UnityEngine/XR/XRNode.hpp"
 #include "UnityEngine/Resources.hpp"
+
+#include "System/Action_1.hpp"
 
 #include "TMPro/TextMeshProUGUI.hpp"
 
@@ -72,18 +75,23 @@ TMPro::TextMeshProUGUI* skipText = nullptr;
 
 float LerpUnclamped(float a, float b, float t) {return a + (b - a) * t;}
 
+template<class T>
+List<T>* GetBeatmapDataItems(IReadonlyBeatmapData* data){
+    auto* beatmapDataItems = List<T>::New_ctor(); 
+    beatmapDataItems->AddRange(data->GetBeatmapDataItems<T>());
+    return beatmapDataItems;
+}
+
+#define MakeDeleg(Action, Type, Func) (il2cpp_utils::MakeDelegate<Action<Type>*>(classof(Action<Type>*), static_cast<std::function<void(Type)>>(Func)))
+
 void CalculateSkipTimePairs(IReadonlyBeatmapData* data){
-    std::vector<float> mapValues;
-    auto* notes = List<NoteData*>::New_ctor(); notes->AddRange(data->GetBeatmapDataItems<NoteData*>());
-    auto* sliders = List<SliderData*>::New_ctor(); sliders->AddRange(data->GetBeatmapDataItems<SliderData*>());
-    auto itr1 = notes->GetEnumerator();
-    while (itr1.MoveNext()){
-        auto* noteData = itr1.get_Current();
+    std::vector<float> mapValues; skipTimePairs.clear(); std::vector<std::pair<float, float>>().swap(skipTimePairs); 
+    float skipIntro = getIntroSkipConfig().skipIntro.GetValue(), skipMiddle = getIntroSkipConfig().skipMiddle.GetValue(), 
+          skipOutro = getIntroSkipConfig().skipOutro.GetValue(), minSkipTime = getIntroSkipConfig().minSkipTime.GetValue();
+    GetBeatmapDataItems<NoteData*>(data)->ForEach(MakeDeleg(System::Action_1, NoteData*, ([&mapValues](NoteData* noteData){
         if (noteData->get_scoringType() != -1 && noteData->get_scoringType() != 4) mapValues.push_back(noteData->get_time());
-    }
-    auto itr2 = sliders->GetEnumerator();
-    while (itr2.MoveNext()){
-        auto* sliderData = itr2.get_Current();
+    })));
+    GetBeatmapDataItems<SliderData*>(data)->ForEach(MakeDeleg(System::Action_1, SliderData*, ([&mapValues](SliderData* sliderData){
         if (sliderData->get_sliderType() == 1){
             if (sliderData->get_hasHeadNote()) mapValues.push_back(sliderData->get_time());
             for (int i = 1; i < sliderData->get_sliceCount(); i++){
@@ -91,13 +99,21 @@ void CalculateSkipTimePairs(IReadonlyBeatmapData* data){
                 mapValues.push_back(LerpUnclamped(sliderData->get_time(), sliderData->get_tailTime(), t));
             }
         }
-    }
+    })));
+    GetBeatmapDataItems<ObstacleData*>(data)->ForEach(MakeDeleg(System::Action_1, ObstacleData*, ([&mapValues, minSkipTime](ObstacleData* obstacleData){
+        float startIndex = obstacleData->get_lineIndex();
+        float endIndex = startIndex + obstacleData->get_width()-1;
+        if (startIndex <= 2 && endIndex >= 1){
+            mapValues.push_back(obstacleData->get_time());
+            int lenDurRatio = (int)(obstacleData->get_duration() / minSkipTime);
+            for (int i=1; i<=lenDurRatio; i++) mapValues.push_back(obstacleData->get_time() + (i * minSkipTime));
+            mapValues.push_back(obstacleData->get_time() + obstacleData->get_duration());
+        }
+    })));
     if (mapValues.empty()) skipTimePairs.push_back(std::make_pair(0.1f, songLength - 0.5f));
     else {
         std::sort(mapValues.begin(), mapValues.end(), [](auto &left, auto &right) { return left < right; });
-        float currentTime = mapValues[0], skipIntro = getIntroSkipConfig().skipIntro.GetValue(), skipMiddle = getIntroSkipConfig().skipMiddle.GetValue(), 
-        skipOutro = getIntroSkipConfig().skipOutro.GetValue(), minSkipTime = getIntroSkipConfig().minSkipTime.GetValue();
-        skipTimePairs.clear(); std::vector<std::pair<float, float>>().swap(skipTimePairs); 
+        float currentTime = mapValues[0];
         if (skipIntro && currentTime > minSkipTime) skipTimePairs.push_back(std::make_pair(0.1f, currentTime - 1.5f));
         if (skipMiddle){
             for (auto& time : mapValues){
