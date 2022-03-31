@@ -6,6 +6,10 @@
 
 #include "Config.hpp"
 
+#ifndef USE_CODEGEN_FIELDS
+#define USE_CODEGEN_FIELDS
+#endif
+
 #include "GlobalNamespace/GameplayCoreSceneSetupData.hpp"
 #include "GlobalNamespace/IDifficultyBeatmap.hpp"
 #include "GlobalNamespace/IPreviewBeatmapLevel.hpp"
@@ -82,28 +86,37 @@ List<T>* GetBeatmapDataItems(IReadonlyBeatmapData* data){
     return beatmapDataItems;
 }
 
-#define Deleg(T, Func) (il2cpp_utils::MakeDelegate<System::Action_1<T>*>(classof(System::Action_1<T>*), static_cast<std::function<void(T)>>(Func)))
+template<class T>
+void ClearVector(std::vector<T>* vector){
+    vector->clear(); std::vector<T>().swap(*vector);
+}
 
 void CalculateSkipTimePairs(IReadonlyBeatmapData* data){
-    std::vector<float> mapValues; skipTimePairs.clear(); std::vector<std::pair<float, float>>().swap(skipTimePairs); 
-    GetBeatmapDataItems<NoteData*>(data)->ForEach(Deleg(NoteData*, [&](NoteData* noteData){
-        if (noteData->get_scoringType() != -1 && noteData->get_scoringType() != 4) mapValues.push_back(noteData->get_time());
-    }));
-    GetBeatmapDataItems<SliderData*>(data)->ForEach(Deleg(SliderData*, [&](SliderData* sliderData){
-        if (sliderData->get_sliderType() == 1){
-            int slices = sliderData->get_sliceCount();
-            if (sliderData->get_hasHeadNote()) mapValues.push_back(sliderData->get_time());
-            for (int i = 1; i < slices; i++) mapValues.push_back(LerpU(sliderData->get_time(), sliderData->get_tailTime(), i / (slices - 1)));
+    std::vector<float> mapValues; mapValues.reserve(1500);
+    List<NoteData*>* noteDataItems = GetBeatmapDataItems<NoteData*>(data);
+    for (int i = 0; i < noteDataItems->size; i++){
+        NoteData* noteData = noteDataItems->items[i];
+        if (noteData->scoringType != -1 && noteData->scoringType != 4) mapValues.push_back(noteData->time);
+    }
+    List<SliderData*>* sliderDataItems = GetBeatmapDataItems<SliderData*>(data);
+    for (int i = 0; i < sliderDataItems->size; i++){
+        SliderData* sliderData = sliderDataItems->items[i];
+        if (sliderData->sliderType == 1){
+            int slices = sliderData->sliceCount;
+            if (sliderData->hasHeadNote) mapValues.push_back(sliderData->time);
+            for (int i = 1; i < slices; i++) mapValues.push_back(LerpU(sliderData->time, sliderData->tailTime, i / (slices - 1)));
         }
-    }));
-    GetBeatmapDataItems<ObstacleData*>(data)->ForEach(Deleg(ObstacleData*, [&](ObstacleData* obstacleData){
-        float startIndex = obstacleData->get_lineIndex();
-        float endIndex = startIndex + obstacleData->get_width()-1;
+    }
+    List<ObstacleData*>* obstacleDataItems = GetBeatmapDataItems<ObstacleData*>(data);
+    for (int i = 0; i < obstacleDataItems->size; i++){
+        ObstacleData* obstacleData = obstacleDataItems->items[i];
+        float startIndex = obstacleData->lineIndex;
+        float endIndex = startIndex + obstacleData->width -1;
         if (startIndex <= 2 && endIndex >= 1){
-            for (int i=0; i <= obstacleData->get_duration() / 2; i++) mapValues.push_back(obstacleData->get_time() + (i * 2));
-            mapValues.push_back(obstacleData->get_time() + obstacleData->get_duration());
+            for (int i=0; i <= obstacleData->duration / 2; i++) mapValues.push_back(obstacleData->time + (i * 2));
+            mapValues.push_back(obstacleData->time + obstacleData->duration);
         }
-    }));
+    }
     if (mapValues.empty()) skipTimePairs.push_back(std::make_pair(0.1f, songLength - 0.5f));
     else {
         std::sort(mapValues.begin(), mapValues.end(), [](auto &left, auto &right) { return left < right; });
@@ -118,7 +131,7 @@ void CalculateSkipTimePairs(IReadonlyBeatmapData* data){
             }
         }
         if (skipOutro && songLength - mapValues.back() > minSkipTime) skipTimePairs.push_back(std::make_pair(mapValues.back(), songLength - 0.5f));
-        mapValues.clear(); std::vector<float>().swap(mapValues);
+        ClearVector<float>(&mapValues);
     }
 }
 
@@ -140,6 +153,7 @@ MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(GameplayCoreSceneSetupData_ctor, "", "Gamep
 MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(BeatmapData_Init, "", "BeatmapCallbacksController", ".ctor", void, BeatmapCallbacksController* self, BeatmapCallbacksController::InitData* initData)
 {
     BeatmapData_Init(self, initData);
+    ClearVector<std::pair<float, float>>(&skipTimePairs);
     CalculateSkipTimePairs(initData->dyn_beatmapData());
     skipItr = skipTimePairs.begin();
 }
