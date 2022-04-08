@@ -9,6 +9,7 @@ DECLARE_CONFIG(IntroSkipConfig,
     CONFIG_VALUE(skipMiddle, bool, "Enable Middle Skipping", true);
     CONFIG_VALUE(skipOutro, bool, "Enable Outro Skipping", true);
     CONFIG_VALUE(minSkipTime, float, "Minimum Skip Time", 5.0f);
+    CONFIG_VALUE(minHoldTime, float, "Minimum Hold Time", 0.5f);
 
     CONFIG_INIT_FUNCTION(
         CONFIG_INIT_VALUE(version);
@@ -17,5 +18,6 @@ DECLARE_CONFIG(IntroSkipConfig,
         CONFIG_INIT_VALUE(skipMiddle);
         CONFIG_INIT_VALUE(skipOutro);
         CONFIG_INIT_VALUE(minSkipTime);
+        CONFIG_INIT_VALUE(minHoldTime);
     )
 )

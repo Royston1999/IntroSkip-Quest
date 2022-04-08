@@ -35,6 +35,7 @@
 #include "UnityEngine/AudioSource.hpp"
 #include "UnityEngine/XR/XRNode.hpp"
 #include "UnityEngine/Resources.hpp"
+#include "UnityEngine/Time.hpp"
 
 #include "System/Action_1.hpp"
 
@@ -76,6 +77,7 @@ std::vector<std::pair<float, float>>::iterator skipItr;
 bool currentlySkippable, isMulti;
 float songLength, lTriggerVal, rTriggerVal;
 TMPro::TextMeshProUGUI* skipText = nullptr;
+float timeHeld = 0;
 
 float LerpU(float a, float b, float t) {return a + (b - a) * t;}
 
@@ -162,6 +164,7 @@ MAKE_HOOK_MATCH(SongUpdate, &AudioTimeSyncController::Update, void, AudioTimeSyn
     SongUpdate(self);
     if (getIntroSkipConfig().isEnabled.GetValue() && !isMulti){
         if (skipItr != skipTimePairs.end()){
+            float timeToHold = getIntroSkipConfig().minHoldTime.GetValue();
             float currentTime = self->dyn__songTime();
             if (skipItr->first < currentTime && !currentlySkippable){
                 currentlySkippable = true;
@@ -173,12 +176,14 @@ MAKE_HOOK_MATCH(SongUpdate, &AudioTimeSyncController::Update, void, AudioTimeSyn
                 currentlySkippable = false;
                 skipText->get_gameObject()->set_active(false);
             }
-            else if (currentlySkippable && lTriggerVal > 0.85 && rTriggerVal > 0.85 && self->dyn__state() == 0){
+            else if (currentlySkippable && lTriggerVal > 0.85 && rTriggerVal > 0.85 && self->dyn__state() == 0 && timeHeld >= timeToHold){
                 self->dyn__audioSource()->set_time(skipItr->second);
                 skipItr++;
                 currentlySkippable = false;
                 skipText->get_gameObject()->set_active(false);
             }
+            if (lTriggerVal > 0.85 && rTriggerVal > 0.85) timeHeld += UnityEngine::Time::get_deltaTime();
+            else if (timeHeld > 0) timeHeld = 0;
         }
     }
 }
@@ -205,16 +210,19 @@ void DidActivate(HMUI::ViewController* self, bool firstActivation, bool addedToH
         UnityEngine::UI::Toggle* skipMiddle = AddConfigValueToggle(container->get_transform(), getIntroSkipConfig().skipMiddle);
         UnityEngine::UI::Toggle* skipOutro = AddConfigValueToggle(container->get_transform(), getIntroSkipConfig().skipOutro);
         QuestUI::IncrementSetting* minSkipTime = AddConfigValueIncrementFloat(container->get_transform(), getIntroSkipConfig().minSkipTime, 1, 0.1f, 2.5f, 10.0f);
+        QuestUI::IncrementSetting* minHoldTime = AddConfigValueIncrementFloat(container->get_transform(), getIntroSkipConfig().minHoldTime, 1, 0.1f, 0.0f, 5.0f);
         QuestUI::BeatSaberUI::AddHoverHint(isEnabled->get_gameObject(), "Enable the Intro Skip Mod");
         QuestUI::BeatSaberUI::AddHoverHint(skipIntro->get_gameObject(), "Enable the ability to skip the beginning of songs");
         QuestUI::BeatSaberUI::AddHoverHint(skipMiddle->get_gameObject(), "Enable the ability to skip the middle sections of songs");
         QuestUI::BeatSaberUI::AddHoverHint(skipOutro->get_gameObject(), "Enable the ability to skip the ending of songs");
         QuestUI::BeatSaberUI::AddHoverHint(minSkipTime->get_gameObject(), "Minimum amount of downtime required to be able to skip that section of the song");
+        QuestUI::BeatSaberUI::AddHoverHint(minHoldTime->get_gameObject(), "How long you you are required to press the triggers for before it skips");
     }
 }
 
 // Called later on in the game loading - a good time to install function hooks
 extern "C" void load() {
+    Modloader::requireMod("SmoothedController");
     il2cpp_functions::Init();
     getIntroSkipConfig().Init(modInfo);
     QuestUI::Register::RegisterModSettingsViewController(modInfo, DidActivate);
