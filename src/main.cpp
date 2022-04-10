@@ -82,10 +82,11 @@ float timeHeld = 0;
 float LerpU(float a, float b, float t) {return a + (b - a) * t;}
 
 template<class T>
-List<T>* GetBeatmapDataItems(IReadonlyBeatmapData* data){
+ArrayW<T> GetBeatmapDataItems(IReadonlyBeatmapData* data){
     auto* beatmapDataItems = List<T>::New_ctor(); 
     beatmapDataItems->AddRange(data->GetBeatmapDataItems<T>());
-    return beatmapDataItems;
+    beatmapDataItems->items->max_length = beatmapDataItems->size;
+    return beatmapDataItems->items;
 }
 
 template<class T>
@@ -93,25 +94,18 @@ void ClearVector(std::vector<T>* vector){
     vector->clear(); std::vector<T>().swap(*vector);
 }
 
-void CalculateSkipTimePairs(IReadonlyBeatmapData* data){
+void CalculateSkipTimePairs(IReadonlyBeatmapData* beatmapData){
     std::vector<float> mapValues; mapValues.reserve(1500);
-    List<NoteData*>* noteDataItems = GetBeatmapDataItems<NoteData*>(data);
-    for (int i = 0; i < noteDataItems->size; i++){
-        NoteData* noteData = noteDataItems->items[i];
-        if (noteData->scoringType != -1 && noteData->scoringType != 4) mapValues.push_back(noteData->time);
+    for (auto& noteData : GetBeatmapDataItems<NoteData*>(beatmapData)){
+        if (noteData->scoringType != -1) mapValues.push_back(noteData->time);
     }
-    List<SliderData*>* sliderDataItems = GetBeatmapDataItems<SliderData*>(data);
-    for (int i = 0; i < sliderDataItems->size; i++){
-        SliderData* sliderData = sliderDataItems->items[i];
+    for (auto& sliderData : GetBeatmapDataItems<SliderData*>(beatmapData)){
         if (sliderData->sliderType == 1){
             int slices = sliderData->sliceCount;
-            if (sliderData->hasHeadNote) mapValues.push_back(sliderData->time);
             for (int i = 1; i < slices; i++) mapValues.push_back(LerpU(sliderData->time, sliderData->tailTime, i / (slices - 1)));
         }
     }
-    List<ObstacleData*>* obstacleDataItems = GetBeatmapDataItems<ObstacleData*>(data);
-    for (int i = 0; i < obstacleDataItems->size; i++){
-        ObstacleData* obstacleData = obstacleDataItems->items[i];
+    for (auto& obstacleData : GetBeatmapDataItems<ObstacleData*>(beatmapData)){
         float startIndex = obstacleData->lineIndex;
         float endIndex = startIndex + obstacleData->width -1;
         if (startIndex <= 2 && endIndex >= 1){
