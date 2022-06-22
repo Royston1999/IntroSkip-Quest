@@ -17,10 +17,10 @@
               "${workspaceFolder}/extern/includes/codegen/include",
               "${workspaceFolder}/extern/includes/libil2cpp/il2cpp/libil2cpp",
               "${default}",
-              "D:/BeatSaberCustom/android-ndk-r23b/",
-              "D:/BeatSaberCustom/android-ndk-r23b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/",
-              "D:/BeatSaberCustom/android-ndk-r23b/sources/cxx-stl/llvm-libc++/include/",
-              "D:/BeatSaberCustom/android-ndk-r23b/sources/cxx-stl/llvm-libc++abi/include/"
+              "C:/Users/royst/OneDrive/Desktop/BeatSaberModding/android-ndk-r23b/",
+              "C:/Users/royst/OneDrive/Desktop/BeatSaberModding/android-ndk-r23b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/",
+              "C:/Users/royst/OneDrive/Desktop/BeatSaberModding/android-ndk-r23b/sources/cxx-stl/llvm-libc++/include/",
+              "C:/Users/royst/OneDrive/Desktop/BeatSaberModding/android-ndk-r23b/sources/cxx-stl/llvm-libc++abi/include/"
           ],
           "name": "Quest",
           "cStandard": "c11",
