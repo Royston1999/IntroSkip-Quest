@@ -115,6 +115,6 @@
         "xutility": "cpp",
         "format": "cpp",
         "stop_token": "cpp",
-        "memory_resource": "cpp",
+        "memory_resource": "cpp"
     }
 }
