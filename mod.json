@@ -2,7 +2,7 @@
 	"_QPVersion": "0.1.1",
 	"name": "Intro Skip",
 	"id": "IntroSkip",
-	"author": "Polly51104",
+	"author": "Polly51104, Pink",
 	"version": "1.0.0",
 	"coverImage": "Cover.png",
 	"packageId": "com.beatgames.beatsaber",
@@ -13,7 +13,7 @@
 		"libIntroSkip.so"
 	],
 	"libraryFiles": [
-		"libbeatsaber-hook_3_7_4.so"
+		"libbeatsaber-hook_3_8_5.so"
 	],
 	"fileCopies": []
 }
