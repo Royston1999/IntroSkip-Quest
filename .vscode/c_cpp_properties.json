@@ -1,27 +1,32 @@
 {
   "configurations": [
-    {
-      "defines": [
-        "ID=\"IntroSkip\"",
-        "VERSION=\"0.1.0\"",
-        "__GNUC__",
-        "__aarch64__"
-      ],
-      "includePath": [
-        "${workspaceFolder}/**",
-        "${workspaceFolder}/shared",
-        "${workspaceFolder}/include",
-        "${workspaceFolder}/extern/questui/shared/cppcodec",
-        "${workspaceFolder}/extern/**",
-        "${workspaceFolder}/extern/libil2cpp/il2cpp/libil2cpp",
-        "C:/Users/royst/OneDrive/Desktop/BeatSaberModding/android-ndk-r23b/**"
-    ],
-    "name": "Quest",
-    "cStandard": "c11",
-    "cppStandard": "c++20",
-    "intelliSenseMode": "windows-msvc-x64",
-    "compileCommands": "${workspaceFolder}/build/compile_commands.json"
-}
-],
-"version": 4
+      {
+          "defines": [
+              "MOD_ID=\"IntroSkip\"",
+              "VERSION=\"1.1.0\"",
+              "__GNUC__",
+              "__aarch64__",
+              "ID=\"DataSender\"",
+              "USE_CODEGEN_FIELDS"
+          ],
+          "includePath": [
+              "${workspaceFolder}/",
+              "${workspaceFolder}/shared",
+              "${workspaceFolder}/include",
+              "${workspaceFolder}/extern/includes",
+              "${workspaceFolder}/extern/includes/codegen/include",
+              "${workspaceFolder}/extern/includes/libil2cpp/il2cpp/libil2cpp",
+              "${default}",
+              "C:/Users/royst/OneDrive/Desktop/BeatSaberModding/android-ndk-r23b/",
+              "C:/Users/royst/OneDrive/Desktop/BeatSaberModding/android-ndk-r23b/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/",
+              "C:/Users/royst/OneDrive/Desktop/BeatSaberModding/android-ndk-r23b/sources/cxx-stl/llvm-libc++/include/",
+              "C:/Users/royst/OneDrive/Desktop/BeatSaberModding/android-ndk-r23b/sources/cxx-stl/llvm-libc++abi/include/"
+          ],
+          "name": "Quest",
+          "cStandard": "c11",
+          "cppStandard": "c++20",
+          "intelliSenseMode": "linux-clang-arm64"
+      }
+  ],
+  "version": 4
 }
