@@ -74,8 +74,8 @@ extern "C" void setup(ModInfo& info) {
 
 std::vector<std::pair<float, float>> skipTimePairs;
 std::vector<std::pair<float, float>>::iterator skipItr;
-bool currentlySkippable, isMulti;
-float songLength, lTriggerVal, rTriggerVal;
+bool isMulti, modEnabled;
+float songLength, lTriggerVal, rTriggerVal, requiredHoldTime;
 TMPro::TextMeshProUGUI* skipText = nullptr;
 float timeHeld = 0;
 
@@ -139,52 +139,49 @@ TMPro::TextMeshProUGUI* CreateSkipText(){
     return text;
 }
 
+void setSkipText(bool value){
+    if (skipText == nullptr) skipText = CreateSkipText();
+    if (skipText->get_gameObject()->get_active() != value) skipText->get_gameObject()->SetActive(value);
+}
+
+void iterateToNextPair(){
+    setSkipText(false);
+    skipItr++;
+}
+
 MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(GameplayCoreSceneSetupData_ctor, "", "GameplayCoreSceneSetupData", ".ctor", void, GameplayCoreSceneSetupData* self, IDifficultyBeatmap* difficultyBeatmap, IPreviewBeatmapLevel* previewBeatmapLevel, GameplayModifiers* gameplayModifiers, PlayerSpecificSettings* playerSpecificSettings, PracticeSettings* practiceSettings, bool useTestNoteCutSoundEffects, EnvironmentInfoSO* environmentInfo, ColorScheme* colorScheme, MainSettingsModelSO* mainSettingsModel)
 {
     GameplayCoreSceneSetupData_ctor(self, difficultyBeatmap, previewBeatmapLevel, gameplayModifiers, playerSpecificSettings, practiceSettings, useTestNoteCutSoundEffects, environmentInfo, colorScheme, mainSettingsModel);
     songLength = previewBeatmapLevel->get_songDuration();
-    skipText = nullptr; currentlySkippable = false; isMulti = false;
+    skipText = nullptr; isMulti = false; modEnabled = getIntroSkipConfig().isEnabled.GetValue(); requiredHoldTime = getIntroSkipConfig().minHoldTime.GetValue();
 }
 
 MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(BeatmapData_Init, "", "BeatmapCallbacksController", ".ctor", void, BeatmapCallbacksController* self, BeatmapCallbacksController::InitData* initData)
 {
     BeatmapData_Init(self, initData);
     ClearVector<std::pair<float, float>>(&skipTimePairs);
-    CalculateSkipTimePairs(initData->dyn_beatmapData());
+    CalculateSkipTimePairs(initData->beatmapData);
     skipItr = skipTimePairs.begin();
 }
 
 MAKE_HOOK_MATCH(SongUpdate, &AudioTimeSyncController::Update, void, AudioTimeSyncController* self) {
     SongUpdate(self);
-    if (getIntroSkipConfig().isEnabled.GetValue() && !isMulti){
-        if (skipItr != skipTimePairs.end()){
-            float timeToHold = getIntroSkipConfig().minHoldTime.GetValue();
-            float currentTime = self->dyn__songTime();
-            if (skipItr->first < currentTime && !currentlySkippable){
-                currentlySkippable = true;
-                if (skipText == nullptr) skipText = CreateSkipText();
-                skipText->get_gameObject()->set_active(true);
-            }
-            else if (skipItr->second < currentTime && currentlySkippable){
-                skipItr++;
-                currentlySkippable = false;
-                skipText->get_gameObject()->set_active(false);
-            }
-            else if (currentlySkippable && lTriggerVal > 0.85 && rTriggerVal > 0.85 && self->dyn__state() == 0 && timeHeld >= timeToHold){
-                self->dyn__audioSource()->set_time(skipItr->second);
-                skipItr++;
-                currentlySkippable = false;
-                skipText->get_gameObject()->set_active(false);
-            }
-            if (lTriggerVal > 0.85 && rTriggerVal > 0.85) timeHeld += UnityEngine::Time::get_deltaTime();
-            else if (timeHeld > 0) timeHeld = 0;
-        }
+    if (modEnabled && !isMulti && skipItr != skipTimePairs.end()){
+        float currentTime = self->songTime, bufferedCurrentTime = currentTime + 10 * UnityEngine::Time::get_deltaTime();
+        bool triggersPressed = lTriggerVal > 0.85 && rTriggerVal > 0.85, notPaused = self->state == 0;
+        
+        if (skipItr->second <= bufferedCurrentTime) return iterateToNextPair();
+        else if (skipItr->first >= currentTime) return;
+        else setSkipText(true);
+        if (triggersPressed && notPaused && timeHeld >= requiredHoldTime) self->audioSource->set_time(skipItr->second);
+        if (triggersPressed) timeHeld += UnityEngine::Time::get_deltaTime();
+        else if (timeHeld > 0) timeHeld = 0;
     }
 }
 
 MAKE_HOOK_MATCH(ControllerUpdate, &VRController::Update, void, VRController* self) {
     float trigger = self->get_triggerValue();
-    auto node = self->dyn__node();
+    auto node = self->node;
     if (node == XRNode::LeftHand) lTriggerVal = trigger;
     if (node == XRNode::RightHand) rTriggerVal = trigger;
     ControllerUpdate(self);
