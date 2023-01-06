@@ -1,19 +1,36 @@
 {
-	"_QPVersion": "0.1.1",
-	"name": "Intro Skip",
-	"id": "IntroSkip",
-	"author": "Polly51104",
-	"version": "1.0.0",
-	"coverImage": "Cover.png",
-	"packageId": "com.beatgames.beatsaber",
-	"packageVersion": "1.24.0",
-	"description": "skip the intro and outro of maps",
-	"dependencies": [],
-	"modFiles": [
-		"libIntroSkip.so"
-	],
-	"libraryFiles": [
-		"libbeatsaber-hook_3_12_0.so"
-	],
-	"fileCopies": []
+  "_QPVersion": "0.1.1",
+  "name": "Intro Skip",
+  "id": "IntroSkip",
+  "author": "Polly51104",
+  "version": "1.0.2",
+  "packageId": "com.beatgames.beatsaber",
+  "packageVersion": "1.27.0_3631150051",
+  "description": "Skip the intro and outro of maps",
+  "coverImage": "Cover.png",
+  "dependencies": [
+    {
+      "version": "^0.15.22",
+      "id": "custom-types",
+      "downloadIfMissing": "https://github.com/sc2ad/Il2CppQuestTypePatching/releases/download/v0.15.22/CustomTypes.qmod"
+    },
+    {
+      "version": "^0.32.0",
+      "id": "codegen",
+      "downloadIfMissing": "https://github.com/sc2ad/BeatSaber-Quest-Codegen/releases/download/v0.32.0/Codegen.qmod"
+    },
+    {
+      "version": "^0.17.10",
+      "id": "questui",
+      "downloadIfMissing": "https://github.com/darknight1050/QuestUI/releases/download/v0.17.10/QuestUI.qmod"
+    }
+  ],
+  "modFiles": [
+    "libIntroSkip.so"
+  ],
+  "libraryFiles": [
+    "libbeatsaber-hook_3_14_0.so"
+  ],
+  "fileCopies": [],
+  "copyExtensions": []
 }

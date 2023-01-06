@@ -6,10 +6,6 @@
 
 #include "Config.hpp"
 
-#ifndef USE_CODEGEN_FIELDS
-#define USE_CODEGEN_FIELDS
-#endif
-
 #include "GlobalNamespace/GameplayCoreSceneSetupData.hpp"
 #include "GlobalNamespace/IDifficultyBeatmap.hpp"
 #include "GlobalNamespace/IPreviewBeatmapLevel.hpp"
@@ -29,6 +25,7 @@
 #include "GlobalNamespace/BeatmapCallbacksController.hpp"
 #include "GlobalNamespace/BeatmapCallbacksController_InitData.hpp"
 #include "GlobalNamespace/MultiplayerLocalActiveClient.hpp"
+#include "GlobalNamespace/BeatmapDataCache.hpp"
 
 #include "HMUI/ViewController.hpp"
 
@@ -84,14 +81,14 @@ float LerpU(float a, float b, float t) {return a + (b - a) * t;}
 template<class T>
 ArrayW<T> GetBeatmapDataItems(IReadonlyBeatmapData* data){
     auto* beatmapDataItems = List<T>::New_ctor(); 
-    beatmapDataItems->AddRange(data->GetBeatmapDataItems<T>());
+    beatmapDataItems->AddRange(data->GetBeatmapDataItems<T>(0));
     beatmapDataItems->items->max_length = beatmapDataItems->size;
     return beatmapDataItems->items;
 }
 
 template<class T>
-void ClearVector(std::vector<T>* vector){
-    vector->clear(); std::vector<T>().swap(*vector);
+void ClearVector(std::vector<T>& vector){
+    vector.clear(); std::vector<T>().swap(vector);
 }
 
 void CalculateSkipTimePairs(IReadonlyBeatmapData* beatmapData){
@@ -127,7 +124,7 @@ void CalculateSkipTimePairs(IReadonlyBeatmapData* beatmapData){
             }
         }
         if (skipOutro && songLength - mapValues.back() > minSkipTime) skipTimePairs.push_back(std::make_pair(mapValues.back(), songLength - 0.5f));
-        ClearVector<float>(&mapValues);
+        ClearVector<float>(mapValues);
     }
 }
 
@@ -146,12 +143,13 @@ void setSkipText(bool value){
 
 void iterateToNextPair(){
     setSkipText(false);
+    timeHeld = 0;
     skipItr++;
 }
 
-MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(GameplayCoreSceneSetupData_ctor, "", "GameplayCoreSceneSetupData", ".ctor", void, GameplayCoreSceneSetupData* self, IDifficultyBeatmap* difficultyBeatmap, IPreviewBeatmapLevel* previewBeatmapLevel, GameplayModifiers* gameplayModifiers, PlayerSpecificSettings* playerSpecificSettings, PracticeSettings* practiceSettings, bool useTestNoteCutSoundEffects, EnvironmentInfoSO* environmentInfo, ColorScheme* colorScheme, MainSettingsModelSO* mainSettingsModel)
+MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(GameplayCoreSceneSetupData_ctor, "", "GameplayCoreSceneSetupData", ".ctor", void, GameplayCoreSceneSetupData* self, IDifficultyBeatmap* difficultyBeatmap, IPreviewBeatmapLevel* previewBeatmapLevel, GameplayModifiers* gameplayModifiers, PlayerSpecificSettings* playerSpecificSettings, PracticeSettings* practiceSettings, bool useTestNoteCutSoundEffects, EnvironmentInfoSO* environmentInfo, ColorScheme* colorScheme, MainSettingsModelSO* mainSettingsModel, BeatmapDataCache* beatmapDataCache)
 {
-    GameplayCoreSceneSetupData_ctor(self, difficultyBeatmap, previewBeatmapLevel, gameplayModifiers, playerSpecificSettings, practiceSettings, useTestNoteCutSoundEffects, environmentInfo, colorScheme, mainSettingsModel);
+    GameplayCoreSceneSetupData_ctor(self, difficultyBeatmap, previewBeatmapLevel, gameplayModifiers, playerSpecificSettings, practiceSettings, useTestNoteCutSoundEffects, environmentInfo, colorScheme, mainSettingsModel, beatmapDataCache);
     songLength = previewBeatmapLevel->get_songDuration();
     skipText = nullptr; isMulti = false; modEnabled = getIntroSkipConfig().isEnabled.GetValue(); requiredHoldTime = getIntroSkipConfig().minHoldTime.GetValue();
 }
@@ -159,9 +157,10 @@ MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(GameplayCoreSceneSetupData_ctor, "", "Gamep
 MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(BeatmapData_Init, "", "BeatmapCallbacksController", ".ctor", void, BeatmapCallbacksController* self, BeatmapCallbacksController::InitData* initData)
 {
     BeatmapData_Init(self, initData);
-    ClearVector<std::pair<float, float>>(&skipTimePairs);
+    ClearVector<std::pair<float, float>>(skipTimePairs);
     CalculateSkipTimePairs(initData->beatmapData);
     skipItr = skipTimePairs.begin();
+    skipText = nullptr;
 }
 
 MAKE_HOOK_MATCH(SongUpdate, &AudioTimeSyncController::Update, void, AudioTimeSyncController* self) {
@@ -169,21 +168,22 @@ MAKE_HOOK_MATCH(SongUpdate, &AudioTimeSyncController::Update, void, AudioTimeSyn
     if (modEnabled && !isMulti && skipItr != skipTimePairs.end()){
         float currentTime = self->songTime, bufferedCurrentTime = currentTime + 10 * UnityEngine::Time::get_deltaTime();
         bool triggersPressed = lTriggerVal > 0.85 && rTriggerVal > 0.85, notPaused = self->state == 0;
-        
-        if (skipItr->second <= bufferedCurrentTime) return iterateToNextPair();
-        else if (skipItr->first >= currentTime) return;
-        else setSkipText(true);
-        if (triggersPressed && notPaused && timeHeld >= requiredHoldTime) self->audioSource->set_time(skipItr->second);
-        if (triggersPressed) timeHeld += UnityEngine::Time::get_deltaTime();
-        else if (timeHeld > 0) timeHeld = 0;
+        float skipStart = skipItr->first, skipEnd = skipItr->second;
+
+        if (skipEnd <= bufferedCurrentTime) return iterateToNextPair(); // passed end of skippable range
+        else if (skipStart >= currentTime) return; // not yet reached next skippable point
+        else setSkipText(true); // woo skippable
+        if (triggersPressed && notPaused && timeHeld >= requiredHoldTime) self->audioSource->set_time(skipEnd); // skip to the end of the range
+        if (triggersPressed) timeHeld += UnityEngine::Time::get_deltaTime(); // increase time held
+        else if (timeHeld > 0) timeHeld = 0; // reset if no longer holding triggers
     }
 }
 
 MAKE_HOOK_MATCH(ControllerUpdate, &VRController::Update, void, VRController* self) {
-    float trigger = self->get_triggerValue();
+    float triggerVal = self->get_triggerValue();
     auto node = self->node;
-    if (node == XRNode::LeftHand) lTriggerVal = trigger;
-    if (node == XRNode::RightHand) rTriggerVal = trigger;
+    if (node == XRNode::LeftHand) lTriggerVal = triggerVal;
+    if (node == XRNode::RightHand) rTriggerVal = triggerVal;
     ControllerUpdate(self);
 }
 
