@@ -42,8 +42,6 @@ using namespace GlobalNamespace;
 using namespace UnityEngine::XR;
 using namespace UnityEngine;
 
-DEFINE_CONFIG(IntroSkipConfig);
-
 static ModInfo modInfo; // Stores the ID and version of our mod, and is sent to the modloader upon startup
 
 // Loads the config from disk using our modInfo, then returns it for use
@@ -80,8 +78,7 @@ float LerpU(float a, float b, float t) {return a + (b - a) * t;}
 
 template<class T>
 ArrayW<T> GetBeatmapDataItems(IReadonlyBeatmapData* data){
-    auto* beatmapDataItems = List<T>::New_ctor(); 
-    beatmapDataItems->AddRange(data->GetBeatmapDataItems<T>(0));
+    auto* beatmapDataItems = List<T>::New_ctor(data->GetBeatmapDataItems<T>(0)); 
     beatmapDataItems->items->max_length = beatmapDataItems->size;
     return beatmapDataItems->items;
 }
