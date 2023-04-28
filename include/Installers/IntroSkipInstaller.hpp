@@ -10,5 +10,4 @@
 DECLARE_CLASS_CODEGEN(IntroSkip::Installers, IntroSkipInstaller, ::Zenject::Installer,
                       DECLARE_OVERRIDE_METHOD(void, InstallBindings, il2cpp_utils::il2cpp_type_check::MetadataGetter<&::Zenject::Installer::InstallBindings>::get());
                       DECLARE_DEFAULT_CTOR();
-                      DECLARE_PRIVATE_FIELD(IntroSkip::IntroSkipController*, _controllerPrefab);
                       )

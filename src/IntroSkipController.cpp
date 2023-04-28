@@ -1,5 +1,4 @@
 #include "IntroSkipController.hpp"
-#include "UnityEngine/Transform.hpp"
 #include "GlobalNamespace/IBeatmapLevel.hpp"
 #include "UnityEngine/Time.hpp"
 #include "questui/shared/BeatSaberUI.hpp"
@@ -11,6 +10,7 @@
 DEFINE_TYPE(IntroSkip, IntroSkipController);
 
 using namespace UnityEngine;
+using namespace GlobalNamespace;
 
 namespace IntroSkip{
     void IntroSkipController::ctor(AudioTimeSyncController* audioTimeSyncController, IReadonlyBeatmapData* readonlyBeatmapData, IDifficultyBeatmap* difficultyBeatmap, PauseMenuManager* pauseMenuManager){
@@ -20,13 +20,13 @@ namespace IntroSkip{
         _difficultyBeatmap = difficultyBeatmap;
         _leftController = pauseMenuManager->get_transform()->Find("MenuControllers/ControllerLeft")->GetComponent<GlobalNamespace::VRController*>();
         _rightController = pauseMenuManager->get_transform()->Find("MenuControllers/ControllerRight")->GetComponent<GlobalNamespace::VRController*>();
+        _comboUIController = Resources::FindObjectsOfTypeAll<ComboUIController*>().LastOrDefault();
         getLogger().info("Constructed IntroSkip Controller");
     }
 
     void IntroSkipController::Initialize(){
         skipTimePairs = Utils::CalculateSkipTimePairs(_mapData, _difficultyBeatmap->get_level()->i_IPreviewBeatmapLevel()->get_songDuration());
         skipItr = skipTimePairs.begin();
-        modEnabled = getIntroSkipConfig().isEnabled.GetValue();
         getLogger().info("Initialised IntroSkip Controller");
     }
 
@@ -37,23 +37,22 @@ namespace IntroSkip{
     }
 
     void IntroSkipController::Tick(){
-        if (modEnabled && skipItr != skipTimePairs.end()){
-            float currentTime = _audioTimeSyncController->songTime, bufferedCurrentTime = currentTime + 10 * UnityEngine::Time::get_deltaTime();
-            bool triggersPressed = _leftController->get_triggerValue() > 0.85 && _rightController->get_triggerValue() > 0.85, notPaused = _audioTimeSyncController->state == 0;
-            float skipStart = skipItr->first, skipEnd = skipItr->second;
+        if (skipItr == skipTimePairs.end()) return;
 
-            if (skipEnd <= bufferedCurrentTime) return iterateToNextPair(); // passed end of skippable range
-            else if (skipStart >= currentTime) return; // not yet reached next skippable point
-            else setSkipText(true); // woo skippable
-            if (triggersPressed && notPaused && timeHeld >= requiredHoldTime) _audioTimeSyncController->audioSource->set_time(skipEnd); // skip to the end of the range
-            if (triggersPressed) timeHeld += UnityEngine::Time::get_deltaTime(); // increase time held
-            else if (timeHeld > 0) timeHeld = 0; // reset if no longer holding triggers
-        }
+        float currentTime = _audioTimeSyncController->songTime, bufferedCurrentTime = currentTime + 10 * UnityEngine::Time::get_deltaTime();
+        bool triggersPressed = _leftController->get_triggerValue() > 0.85 && _rightController->get_triggerValue() > 0.85, notPaused = _audioTimeSyncController->state == 0;
+        float skipStart = skipItr->first, skipEnd = skipItr->second;
+
+        if (skipEnd <= bufferedCurrentTime) return iterateToNextPair(); // passed end of skippable range
+        else if (skipStart >= currentTime) return; // not yet reached next skippable point
+        else setSkipText(true); // woo skippable
+        if (triggersPressed && notPaused && timeHeld >= requiredHoldTime) _audioTimeSyncController->audioSource->set_time(skipEnd); // skip to the end of the range
+        if (triggersPressed) timeHeld += UnityEngine::Time::get_deltaTime(); // increase time held
+        else if (timeHeld > 0) timeHeld = 0; // reset if no longer holding triggers
     }
 
     TMPro::TextMeshProUGUI* IntroSkipController::CreateSkipText(){
-        auto transform = Resources::FindObjectsOfTypeAll<ComboUIController*>().LastOrDefault()->get_transform();
-        auto text = QuestUI::BeatSaberUI::CreateText(transform, "Press Triggers to Skip", Vector2(0, 57));
+        auto text = QuestUI::BeatSaberUI::CreateText(_comboUIController->get_transform(), "Press Triggers to Skip", Vector2(0, 57));
         text->set_alignment(TMPro::TextAlignmentOptions::Center);
         text->get_transform()->set_localScale({6.0f, 6.0f, 0.0f});
         return text;

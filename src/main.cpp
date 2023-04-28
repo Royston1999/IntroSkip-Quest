@@ -9,10 +9,6 @@
 
 #include "questui/shared/QuestUI.hpp"
 
-using namespace GlobalNamespace;
-using namespace UnityEngine::XR;
-using namespace UnityEngine;
-
 static ModInfo modInfo; // Stores the ID and version of our mod, and is sent to the modloader upon startup
 
 // Loads the config from disk using our modInfo, then returns it for use
@@ -59,7 +55,6 @@ void DidActivate(HMUI::ViewController* self, bool firstActivation, bool addedToH
 
 // Called later on in the game loading - a good time to install function hooks
 extern "C" void load() {
-    Modloader::requireMod("SmoothedController");
     il2cpp_functions::Init();
     custom_types::Register::AutoRegister();
     getIntroSkipConfig().Init(modInfo);
