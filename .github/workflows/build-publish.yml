@@ -79,7 +79,7 @@ jobs:
         pwsh -Command ./build.ps1
     - name: Create Qmod
       run: |
-        pwsh -Command ./buildQMOD.ps1
+        pwsh -Command ./buildQMOD.ps1 ${{ env.qmodName }}_${{ github.event.inputs.version }}
     - name: Get Library Name
       id: libname
       run: |
