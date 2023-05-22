@@ -4,7 +4,7 @@
   "info": {
     "name": "Intro Skip",
     "id": "IntroSkip",
-    "version": "1.0.2",
+    "version": "1.1.0",
     "url": null,
     "additionalData": {
       "overrideSoName": "libIntroSkip.so"
