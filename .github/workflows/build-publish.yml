@@ -10,10 +10,10 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release'
+        description: 'tag name'
         required: true
       release_msg:
-        description: 'Message for release'
+        description: 'release title'
         required: true
 
 jobs:
