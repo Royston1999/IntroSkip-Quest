@@ -1,6 +1,6 @@
 # Credit to darknight1050 https://github.com/darknight1050/CrashReporter/blob/master/.github/workflows/build-ndk.yml
 
-name: NDK build
+name: Publish Release
 
 env:
     module_id: IntroSkip
