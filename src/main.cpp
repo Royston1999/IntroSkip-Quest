@@ -1,46 +1,13 @@
 #include "main.hpp"
-#include <vector>
-
-#include "questui/shared/BeatSaberUI.hpp"
-#include "questui/shared/QuestUI.hpp"
 
 #include "Config.hpp"
 
-#include "GlobalNamespace/GameplayCoreSceneSetupData.hpp"
-#include "GlobalNamespace/IDifficultyBeatmap.hpp"
-#include "GlobalNamespace/IPreviewBeatmapLevel.hpp"
-#include "GlobalNamespace/GameplayModifiers.hpp"
-#include "GlobalNamespace/PlayerSpecificSettings.hpp"
-#include "GlobalNamespace/PracticeSettings.hpp"
-#include "GlobalNamespace/EnvironmentInfoSO.hpp"
-#include "GlobalNamespace/ColorScheme.hpp"
-#include "GlobalNamespace/MainSettingsModelSO.hpp"
-#include "GlobalNamespace/IReadonlyBeatmapData.hpp"
-#include "GlobalNamespace/NoteData.hpp"
-#include "GlobalNamespace/SliderData.hpp"
-#include "GlobalNamespace/ObstacleData.hpp"
-#include "GlobalNamespace/AudioTimeSyncController.hpp"
-#include "GlobalNamespace/ComboUIController.hpp"
-#include "GlobalNamespace/VRController.hpp"
-#include "GlobalNamespace/BeatmapCallbacksController.hpp"
-#include "GlobalNamespace/BeatmapCallbacksController_InitData.hpp"
-#include "GlobalNamespace/MultiplayerLocalActiveClient.hpp"
-#include "GlobalNamespace/BeatmapDataCache.hpp"
-
 #include "HMUI/ViewController.hpp"
 
-#include "UnityEngine/AudioSource.hpp"
-#include "UnityEngine/XR/XRNode.hpp"
-#include "UnityEngine/Resources.hpp"
-#include "UnityEngine/Time.hpp"
+#include "lapiz/shared/zenject/Zenjector.hpp"
+#include "Installers/IntroSkipInstaller.hpp"
 
-#include "System/Action_1.hpp"
-
-#include "TMPro/TextMeshProUGUI.hpp"
-
-using namespace GlobalNamespace;
-using namespace UnityEngine::XR;
-using namespace UnityEngine;
+#include "questui/shared/QuestUI.hpp"
 
 static ModInfo modInfo; // Stores the ID and version of our mod, and is sent to the modloader upon startup
 
@@ -67,128 +34,6 @@ extern "C" void setup(ModInfo& info) {
     getLogger().info("Completed setup!");
 }
 
-std::vector<std::pair<float, float>> skipTimePairs;
-std::vector<std::pair<float, float>>::iterator skipItr;
-bool isMulti, modEnabled;
-float songLength, lTriggerVal, rTriggerVal, requiredHoldTime;
-TMPro::TextMeshProUGUI* skipText = nullptr;
-float timeHeld = 0;
-
-float LerpU(float a, float b, float t) {return a + (b - a) * t;}
-
-template<class T>
-ArrayW<T> GetBeatmapDataItems(IReadonlyBeatmapData* data){
-    auto* beatmapDataItems = List<T>::New_ctor(data->GetBeatmapDataItems<T>(0)); 
-    beatmapDataItems->items->max_length = beatmapDataItems->size;
-    return beatmapDataItems->items;
-}
-
-template<class T>
-void ClearVector(std::vector<T>& vector){
-    vector.clear(); std::vector<T>().swap(vector);
-}
-
-void CalculateSkipTimePairs(IReadonlyBeatmapData* beatmapData){
-    std::vector<float> mapValues; mapValues.reserve(1500);
-    for (auto& noteData : GetBeatmapDataItems<NoteData*>(beatmapData)){
-        if (noteData->scoringType != -1) mapValues.push_back(noteData->time);
-    }
-    for (auto& sliderData : GetBeatmapDataItems<SliderData*>(beatmapData)){
-        if (sliderData->sliderType == 1){
-            int slices = sliderData->sliceCount;
-            for (int i = 1; i < slices; i++) mapValues.push_back(LerpU(sliderData->time, sliderData->tailTime, i / (slices - 1)));
-        }
-    }
-    for (auto& obstacleData : GetBeatmapDataItems<ObstacleData*>(beatmapData)){
-        float startIndex = obstacleData->lineIndex;
-        float endIndex = startIndex + obstacleData->width -1;
-        if (startIndex <= 2 && endIndex >= 1){
-            for (int i=0; i <= obstacleData->duration / 2; i++) mapValues.push_back(obstacleData->time + (i * 2));
-            mapValues.push_back(obstacleData->time + obstacleData->duration);
-        }
-    }
-    if (mapValues.empty()) skipTimePairs.push_back(std::make_pair(0.1f, songLength - 0.5f));
-    else {
-        std::sort(mapValues.begin(), mapValues.end(), [](auto &left, auto &right) { return left < right; });
-        float currentTime = mapValues[0];
-        float skipIntro = getIntroSkipConfig().skipIntro.GetValue(), skipMiddle = getIntroSkipConfig().skipMiddle.GetValue();
-        float skipOutro = getIntroSkipConfig().skipOutro.GetValue(), minSkipTime = getIntroSkipConfig().minSkipTime.GetValue();
-        if (skipIntro && currentTime > minSkipTime) skipTimePairs.push_back(std::make_pair(0.1f, currentTime - 1.5f));
-        if (skipMiddle){
-            for (auto& time : mapValues){
-                if (time - currentTime > minSkipTime) skipTimePairs.push_back(std::make_pair(currentTime, time - 1.5f));
-                currentTime = time;
-            }
-        }
-        if (skipOutro && songLength - mapValues.back() > minSkipTime) skipTimePairs.push_back(std::make_pair(mapValues.back(), songLength - 0.5f));
-        ClearVector<float>(mapValues);
-    }
-}
-
-TMPro::TextMeshProUGUI* CreateSkipText(){
-    auto transform = QuestUI::ArrayUtil::Last(Resources::FindObjectsOfTypeAll<ComboUIController*>())->get_transform();
-    auto text = QuestUI::BeatSaberUI::CreateText(transform, "Press Triggers to Skip", Vector2(0, 57));
-    text->set_alignment(TMPro::TextAlignmentOptions::Center);
-    text->get_transform()->set_localScale({6.0f, 6.0f, 0.0f});
-    return text;
-}
-
-void setSkipText(bool value){
-    if (skipText == nullptr) skipText = CreateSkipText();
-    if (skipText->get_gameObject()->get_active() != value) skipText->get_gameObject()->SetActive(value);
-}
-
-void iterateToNextPair(){
-    setSkipText(false);
-    timeHeld = 0;
-    skipItr++;
-}
-
-MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(GameplayCoreSceneSetupData_ctor, "", "GameplayCoreSceneSetupData", ".ctor", void, GameplayCoreSceneSetupData* self, IDifficultyBeatmap* difficultyBeatmap, IPreviewBeatmapLevel* previewBeatmapLevel, GameplayModifiers* gameplayModifiers, PlayerSpecificSettings* playerSpecificSettings, PracticeSettings* practiceSettings, bool useTestNoteCutSoundEffects, EnvironmentInfoSO* environmentInfo, ColorScheme* colorScheme, MainSettingsModelSO* mainSettingsModel, BeatmapDataCache* beatmapDataCache)
-{
-    GameplayCoreSceneSetupData_ctor(self, difficultyBeatmap, previewBeatmapLevel, gameplayModifiers, playerSpecificSettings, practiceSettings, useTestNoteCutSoundEffects, environmentInfo, colorScheme, mainSettingsModel, beatmapDataCache);
-    songLength = previewBeatmapLevel->get_songDuration();
-    skipText = nullptr; isMulti = false; modEnabled = getIntroSkipConfig().isEnabled.GetValue(); requiredHoldTime = getIntroSkipConfig().minHoldTime.GetValue();
-}
-
-MAKE_HOOK_FIND_CLASS_UNSAFE_INSTANCE(BeatmapData_Init, "", "BeatmapCallbacksController", ".ctor", void, BeatmapCallbacksController* self, BeatmapCallbacksController::InitData* initData)
-{
-    BeatmapData_Init(self, initData);
-    ClearVector<std::pair<float, float>>(skipTimePairs);
-    CalculateSkipTimePairs(initData->beatmapData);
-    skipItr = skipTimePairs.begin();
-    skipText = nullptr;
-}
-
-MAKE_HOOK_MATCH(SongUpdate, &AudioTimeSyncController::Update, void, AudioTimeSyncController* self) {
-    SongUpdate(self);
-    if (modEnabled && !isMulti && skipItr != skipTimePairs.end()){
-        float currentTime = self->songTime, bufferedCurrentTime = currentTime + 10 * UnityEngine::Time::get_deltaTime();
-        bool triggersPressed = lTriggerVal > 0.85 && rTriggerVal > 0.85, notPaused = self->state == 0;
-        float skipStart = skipItr->first, skipEnd = skipItr->second;
-
-        if (skipEnd <= bufferedCurrentTime) return iterateToNextPair(); // passed end of skippable range
-        else if (skipStart >= currentTime) return; // not yet reached next skippable point
-        else setSkipText(true); // woo skippable
-        if (triggersPressed && notPaused && timeHeld >= requiredHoldTime) self->audioSource->set_time(skipEnd); // skip to the end of the range
-        if (triggersPressed) timeHeld += UnityEngine::Time::get_deltaTime(); // increase time held
-        else if (timeHeld > 0) timeHeld = 0; // reset if no longer holding triggers
-    }
-}
-
-MAKE_HOOK_MATCH(ControllerUpdate, &VRController::Update, void, VRController* self) {
-    float triggerVal = self->get_triggerValue();
-    auto node = self->node;
-    if (node == XRNode::LeftHand) lTriggerVal = triggerVal;
-    if (node == XRNode::RightHand) rTriggerVal = triggerVal;
-    ControllerUpdate(self);
-}
-
-MAKE_HOOK_MATCH(isMultiplayer, &MultiplayerLocalActiveClient::Start, void, MultiplayerLocalActiveClient* self){
-    isMultiplayer(self);
-    isMulti = true;
-}
-
 void DidActivate(HMUI::ViewController* self, bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling){
     if(firstActivation) 
     {
@@ -210,15 +55,11 @@ void DidActivate(HMUI::ViewController* self, bool firstActivation, bool addedToH
 
 // Called later on in the game loading - a good time to install function hooks
 extern "C" void load() {
-    Modloader::requireMod("SmoothedController");
     il2cpp_functions::Init();
+    custom_types::Register::AutoRegister();
     getIntroSkipConfig().Init(modInfo);
+    QuestUI::Init();
     QuestUI::Register::RegisterModSettingsViewController(modInfo, DidActivate);
-    getLogger().info("Installing hooks...");
-    INSTALL_HOOK(getLogger(), GameplayCoreSceneSetupData_ctor);
-    INSTALL_HOOK(getLogger(), SongUpdate);
-    INSTALL_HOOK(getLogger(), ControllerUpdate);
-    INSTALL_HOOK(getLogger(), BeatmapData_Init);
-    INSTALL_HOOK(getLogger(), isMultiplayer);
-    getLogger().info("Installed all hooks!");
+    auto zenjector = Lapiz::Zenject::Zenjector::Get();
+    zenjector->Install<IntroSkip::Installers::IntroSkipInstaller*, GlobalNamespace::StandardGameplayInstaller*>();
 }
