@@ -40,7 +40,7 @@ ___DECLARE_TYPE_WRAPPER_INHERITANCE(IntroSkip, IntroSkipController, Il2CppTypeEn
                                     private:
                                         SkipTimePairs skipTimePairs;
                                         SkipTimePairs::iterator skipItr;
-                                        float songLength, requiredHoldTime, timeHeld;
+                                        float requiredHoldTime, timeHeld;
                                         TMPro::TextMeshProUGUI* CreateSkipText();
                                         void setSkipText(bool value);
                                         void iterateToNextPair();

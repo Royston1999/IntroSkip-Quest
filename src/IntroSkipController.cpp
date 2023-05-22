@@ -27,6 +27,7 @@ namespace IntroSkip{
     void IntroSkipController::Initialize(){
         skipTimePairs = Utils::CalculateSkipTimePairs(_mapData, _difficultyBeatmap->get_level()->i_IPreviewBeatmapLevel()->get_songDuration());
         skipItr = skipTimePairs.begin();
+        requiredHoldTime = getIntroSkipConfig().minHoldTime.GetValue();
         getLogger().info("Initialised IntroSkip Controller");
     }
 

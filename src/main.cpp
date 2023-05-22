@@ -58,6 +58,7 @@ extern "C" void load() {
     il2cpp_functions::Init();
     custom_types::Register::AutoRegister();
     getIntroSkipConfig().Init(modInfo);
+    QuestUI::Init();
     QuestUI::Register::RegisterModSettingsViewController(modInfo, DidActivate);
     auto zenjector = Lapiz::Zenject::Zenjector::Get();
     zenjector->Install<IntroSkip::Installers::IntroSkipInstaller*, GlobalNamespace::StandardGameplayInstaller*>();
