@@ -1,11 +1,13 @@
 #include "IntroSkipController.hpp"
-#include "GlobalNamespace/IBeatmapLevel.hpp"
 #include "UnityEngine/Time.hpp"
-#include "questui/shared/BeatSaberUI.hpp"
 #include "UnityEngine/Resources.hpp"
 #include "UnityEngine/AudioSource.hpp"
 #include "Config.hpp"
 #include "main.hpp"
+#include "bsml/shared/Helpers/creation.hpp"
+#include "UnityEngine/UI/CanvasScaler.hpp"
+#include "VRUIControls/VRGraphicRaycaster.hpp"
+#include "HMUI/CurvedCanvasSettings.hpp"
 
 DEFINE_TYPE(IntroSkip, IntroSkipController);
 
@@ -13,58 +15,61 @@ using namespace UnityEngine;
 using namespace GlobalNamespace;
 
 namespace IntroSkip{
-    void IntroSkipController::ctor(AudioTimeSyncController* audioTimeSyncController, IReadonlyBeatmapData* readonlyBeatmapData, IDifficultyBeatmap* difficultyBeatmap, PauseMenuManager* pauseMenuManager){
+    void IntroSkipController::ctor(AudioTimeSyncController* audioTimeSyncController, IReadonlyBeatmapData* readonlyBeatmapData, PauseMenuManager* pauseMenuManager, ComboUIController* comboUIController) {
         INVOKE_CTOR();
         _audioTimeSyncController = audioTimeSyncController;
         _mapData = readonlyBeatmapData;
-        _difficultyBeatmap = difficultyBeatmap;
         _leftController = pauseMenuManager->get_transform()->Find("MenuControllers/ControllerLeft")->GetComponent<GlobalNamespace::VRController*>();
         _rightController = pauseMenuManager->get_transform()->Find("MenuControllers/ControllerRight")->GetComponent<GlobalNamespace::VRController*>();
-        _comboUIController = Resources::FindObjectsOfTypeAll<ComboUIController*>().LastOrDefault();
+        _comboUIController = comboUIController;
         getLogger().info("Constructed IntroSkip Controller");
     }
 
-    void IntroSkipController::Initialize(){
-        skipTimePairs = Utils::CalculateSkipTimePairs(_mapData, _difficultyBeatmap->get_level()->i_IPreviewBeatmapLevel()->get_songDuration());
+    void IntroSkipController::Initialize() {
+        skipTimePairs = Utils::CalculateSkipTimePairs(_mapData, _audioTimeSyncController->get_songLength());
         skipItr = skipTimePairs.begin();
         requiredHoldTime = getIntroSkipConfig().minHoldTime.GetValue();
+        _skipText = CreateSkipText();
         getLogger().info("Initialised IntroSkip Controller");
     }
 
-    void IntroSkipController::Dispose(){
+    void IntroSkipController::Dispose() {
         skipTimePairs.clear();
         UnityEngine::Object::Destroy(_skipText);
         getLogger().info("Disposed IntroSkip Controller");
     }
 
-    void IntroSkipController::Tick(){
+    void IntroSkipController::Tick() {
         if (skipItr == skipTimePairs.end()) return;
 
-        float currentTime = _audioTimeSyncController->songTime, bufferedCurrentTime = currentTime + 10 * UnityEngine::Time::get_deltaTime();
-        bool triggersPressed = _leftController->get_triggerValue() > 0.85 && _rightController->get_triggerValue() > 0.85, notPaused = _audioTimeSyncController->state == 0;
+        float currentTime = _audioTimeSyncController->get_songTime(), bufferedCurrentTime = currentTime + 10 * UnityEngine::Time::get_deltaTime();
+        bool triggersPressed = _leftController->get_triggerValue() > 0.85 && _rightController->get_triggerValue() > 0.85, notPaused = _audioTimeSyncController->get_state() == AudioTimeSyncController::State::Playing;
         float skipStart = skipItr->first, skipEnd = skipItr->second;
 
         if (skipEnd <= bufferedCurrentTime) return iterateToNextPair(); // passed end of skippable range
         else if (skipStart >= currentTime) return; // not yet reached next skippable point
         else setSkipText(true); // woo skippable
-        if (triggersPressed && notPaused && timeHeld >= requiredHoldTime) _audioTimeSyncController->audioSource->set_time(skipEnd); // skip to the end of the range
+        if (triggersPressed && notPaused && timeHeld >= requiredHoldTime) _audioTimeSyncController->_audioSource->set_time(skipEnd); // skip to the end of the range
         if (triggersPressed) timeHeld += UnityEngine::Time::get_deltaTime(); // increase time held
         else if (timeHeld > 0) timeHeld = 0; // reset if no longer holding triggers
     }
 
-    TMPro::TextMeshProUGUI* IntroSkipController::CreateSkipText(){
-        auto text = QuestUI::BeatSaberUI::CreateText(_comboUIController->get_transform(), "Press Triggers to Skip", Vector2(0, 57));
+    TMPro::TextMeshProUGUI* IntroSkipController::CreateSkipText() {
+        auto text = BSML::Helpers::CreateText<TMPro::TextMeshProUGUI*>(_comboUIController->get_transform()->get_parent(), "Press Triggers to Skip", {0, 0});
+        _comboUIController->get_transform()->get_parent()->get_gameObject()->AddComponent<Canvas*>(); // 6 hours of my life wasted on this line
+        text->get_transform()->set_localPosition({0.0f, 1.95f, 0.0f});
         text->set_alignment(TMPro::TextAlignmentOptions::Center);
-        text->get_transform()->set_localScale({6.0f, 6.0f, 0.0f});
+        text->get_transform()->set_localScale({0.025f, 0.025f, 0.025f});
+        text->set_fontSize(8);
+        text->get_gameObject()->set_active(false);
         return text;
     }
 
-    void IntroSkipController::setSkipText(bool value){
-        if (_skipText == nullptr) _skipText = CreateSkipText();
-        if (_skipText->get_gameObject()->get_active() != value) _skipText->get_gameObject()->SetActive(value);
+    void IntroSkipController::setSkipText(bool value) {
+        if (_skipText && _skipText->get_gameObject()->get_activeSelf() != value) _skipText->get_gameObject()->set_active(value);
     }
 
-    void IntroSkipController::iterateToNextPair(){
+    void IntroSkipController::iterateToNextPair() {
         setSkipText(false);
         timeHeld = 0;
         skipItr++;

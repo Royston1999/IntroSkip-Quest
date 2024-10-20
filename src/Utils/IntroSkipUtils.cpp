@@ -3,37 +3,46 @@
 #include "GlobalNamespace/ObstacleData.hpp"
 #include "GlobalNamespace/SliderData.hpp"
 #include "Config.hpp"
+#include <type_traits>
+#include "GlobalNamespace/BeatmapDataSortedListForTypeAndIds_1.hpp"
 
 using namespace GlobalNamespace;
-
-namespace IntroSkip::Utils{
+using namespace System::Collections::Generic;
+namespace IntroSkip::Utils {
 
     float LerpU(float a, float b, float t) {
         return a + (b - a) * t;
     }
 
-    SkipTimePairs CalculateSkipTimePairs(IReadonlyBeatmapData* beatmapData, float songLength){
+    template<typename T>
+    requires (std::is_convertible_v<T, BeatmapDataItem*>)
+    ArrayW<T> GetBeatmapDataItems(IReadonlyBeatmapData* data) {
+        auto* beatmapDataItems = List_1<T>::New_ctor(reinterpret_cast<BeatmapData*>(data)->_beatmapDataItemsPerTypeAndId->GetItems<T>(0));
+        beatmapDataItems->_items->max_length = beatmapDataItems->_size;
+        return beatmapDataItems->_items;
+    };
+
+    SkipTimePairs CalculateSkipTimePairs(IReadonlyBeatmapData* beatmapData, float songLength) {
         SkipTimePairs skipTimePairs;
         std::vector<float> mapValues; mapValues.reserve(1500);
         for (auto& noteData : GetBeatmapDataItems<NoteData*>(beatmapData)){
-            if (noteData->scoringType != -1) mapValues.push_back(noteData->time);
+            if (noteData->get_scoringType() != NoteData::ScoringType::Ignore) mapValues.push_back(noteData->get_time());
         }
         for (auto& sliderData : GetBeatmapDataItems<SliderData*>(beatmapData)){
-            if (sliderData->sliderType == 1){
-                int slices = sliderData->sliceCount;
-                for (int i = 1; i < slices; i++) mapValues.push_back(LerpU(sliderData->time, sliderData->tailTime, i / (slices - 1)));
+            if (sliderData->get_sliderType() == SliderData::Type::Burst){
+                int slices = sliderData->get_sliceCount();
+                for (int i = 1; i < slices; i++) mapValues.push_back(LerpU(sliderData->get_time(), sliderData->get_tailTime(), (float)i / (slices - 1)));
             }
         }
         for (auto& obstacleData : GetBeatmapDataItems<ObstacleData*>(beatmapData)){
-            float startIndex = obstacleData->lineIndex;
-            float endIndex = startIndex + obstacleData->width -1;
+            float startIndex = obstacleData->get_lineIndex();
+            float endIndex = startIndex + obstacleData->get_width() -1;
             if (startIndex <= 2 && endIndex >= 1){
-                for (int i=0; i <= obstacleData->duration / 2; i++) mapValues.push_back(obstacleData->time + (i * 2));
-                mapValues.push_back(obstacleData->time + obstacleData->duration);
+                for (int i=0; i <= obstacleData->get_duration() / 2; i++) mapValues.push_back(obstacleData->get_time() + (i * 2));
+                mapValues.push_back(obstacleData->get_time() + obstacleData->get_duration());
             }
         }
-        if (mapValues.empty()) skipTimePairs.push_back(std::make_pair(0.1f, songLength - 0.5f));
-        else {
+        if (!mapValues.empty()) {
             std::sort(mapValues.begin(), mapValues.end(), [](auto &left, auto &right) { return left < right; });
             float currentTime = mapValues[0];
             float skipIntro = getIntroSkipConfig().skipIntro.GetValue(), skipMiddle = getIntroSkipConfig().skipMiddle.GetValue();

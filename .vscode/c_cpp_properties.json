@@ -3,7 +3,7 @@
     {
       "defines": [
         "ID=\"IntroSkip\"",
-        "VERSION=\"0.1.0\"",
+        "VERSION=\"1.2.0\"",
         "__GNUC__",
         "__aarch64__"
       ],
@@ -11,17 +11,21 @@
         "${workspaceFolder}/**",
         "${workspaceFolder}/shared",
         "${workspaceFolder}/include",
-        "${workspaceFolder}/extern/questui/shared/cppcodec",
         "${workspaceFolder}/extern/**",
         "${workspaceFolder}/extern/libil2cpp/il2cpp/libil2cpp",
+        "${workspaceFolder}/extern/include/bs-cordl/include/**",
         "C:/Users/royst/OneDrive/Desktop/BeatSaberModding/android-ndk-r23b/**"
     ],
     "name": "Quest",
     "cStandard": "c11",
     "cppStandard": "c++20",
     "intelliSenseMode": "windows-msvc-x64",
-    "compileCommands": "${workspaceFolder}/build/compile_commands.json"
-}
+    "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+    "compilerArgs": [
+      "-fms-extensions",
+      "-fdeclspec"
+    ]
+  }
 ],
 "version": 4
 }

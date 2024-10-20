@@ -3,13 +3,9 @@
 #include "IntroSkipController.hpp"
 #include "Zenject/DiContainer.hpp"
 #include "Zenject/FromBinderNonGeneric.hpp"
-#include "lapiz/shared/utilities/ZenjectExtensions.hpp"
 #include "Config.hpp"
 
 DEFINE_TYPE(IntroSkip::Installers, IntroSkipInstaller);
-
-using namespace Lapiz::Zenject::ZenjectExtensions;
-
 namespace IntroSkip::Installers
 {
     void IntroSkipInstaller::InstallBindings()

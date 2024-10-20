@@ -4,21 +4,24 @@
   "info": {
     "name": "Intro Skip",
     "id": "IntroSkip",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "url": null,
     "additionalData": {
       "overrideSoName": "libIntroSkip.so"
     }
   },
+  "workspace": {
+    "qmodIncludeDirs": [
+      "./build",
+      "./extern/libs"
+    ],
+    "qmodIncludeFiles": [],
+    "qmodOutput": "IntroSkip"
+  },
   "dependencies": [
     {
-      "id": "codegen",
-      "versionRange": "^0.33.0",
-      "additionalData": {}
-    },
-    {
       "id": "beatsaber-hook",
-      "versionRange": "^3.14.0",
+      "versionRange": "^5.1.9",
       "additionalData": {
         "extraFiles": [
           "src/inline-hook"
@@ -26,30 +29,41 @@
       }
     },
     {
-      "id": "questui",
-      "versionRange": "^0.17.11",
+      "id": "lapiz",
+      "versionRange": "^0.2.0",
       "additionalData": {}
     },
     {
-      "id": "modloader",
-      "versionRange": "^1.2.3",
-      "additionalData": {}
+      "id": "scotland2",
+      "versionRange": "^0.1.4",
+      "additionalData": {
+        "includeQmod": false
+      }
     },
     {
-      "id": "config-utils",
-      "versionRange": "^1.0.2",
+      "id": "bs-cordl",
+      "versionRange": "3700.*",
       "additionalData": {}
     },
     {
       "id": "custom-types",
-      "versionRange": "^0.15.23",
+      "versionRange": "^0.17.0",
       "additionalData": {}
     },
     {
-      "id": "lapiz",
-      "versionRange": "^0.1.11",
+      "id": "config-utils",
+      "versionRange": "^1.4.2",
+      "additionalData": {}
+    },
+    {
+      "id": "bsml",
+      "versionRange": "^0.4.24",
+      "additionalData": {}
+    },
+    {
+      "id": "paper",
+      "versionRange": "^3.6.3",
       "additionalData": {}
     }
-  ],
-  "additionalData": {}
+  ]
 }
