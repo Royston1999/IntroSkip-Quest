@@ -118,7 +118,7 @@ jobs:
           
           ### Build info
         
-          SHA-256: ${{ steps.libname.outputs.QMOD_SHA }}
+          SHA-256: ${{ steps.qmodsha.outputs.QMOD_SHA }}
           Build ID: ${{ steps.libname.outputs.BUILD_ID }}
         files: |
           ./build/${{ steps.libname.outputs.NAME }}
