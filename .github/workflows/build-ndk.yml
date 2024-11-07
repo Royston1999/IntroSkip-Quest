@@ -116,10 +116,10 @@ jobs:
         generate_release_notes: true
         body: |
           
-        ### Build info
+          ### Build info
         
-        SHA-256: ${{ steps.libname.outputs.QMOD_SHA }}
-        Build ID: ${{ steps.libname.outputs.BUILD_ID }}
+          SHA-256: ${{ steps.libname.outputs.QMOD_SHA }}
+          Build ID: ${{ steps.libname.outputs.BUILD_ID }}
         files: |
           ./build/${{ steps.libname.outputs.NAME }}
           ./build/debug/debug_${{ steps.libname.outputs.NAME }}
