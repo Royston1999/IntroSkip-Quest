@@ -10,4 +10,5 @@ DECLARE_CONFIG(IntroSkipConfig,
     CONFIG_VALUE(skipOutro, bool, "Enable Outro Skipping", true);
     CONFIG_VALUE(minSkipTime, float, "Minimum Skip Time", 5.0f);
     CONFIG_VALUE(minHoldTime, float, "Minimum Hold Time", 0.5f);
+    CONFIG_VALUE(bothTriggers, bool, "Require Both Triggers", true);
 )

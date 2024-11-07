@@ -42,14 +42,20 @@ void DidActivate(HMUI::ViewController* self, bool firstActivation, bool addedToH
     ToggleSetting* skipIntro = AddConfigValueToggle(container->get_transform(), getIntroSkipConfig().skipIntro);
     ToggleSetting* skipMiddle = AddConfigValueToggle(container->get_transform(), getIntroSkipConfig().skipMiddle);
     ToggleSetting* skipOutro = AddConfigValueToggle(container->get_transform(), getIntroSkipConfig().skipOutro);
-    IncrementSetting* minSkipTime = AddConfigValueIncrementFloat(container->get_transform(), getIntroSkipConfig().minSkipTime, 1, 0.1f, 2.5f, 10.0f);
-    IncrementSetting* minHoldTime = AddConfigValueIncrementFloat(container->get_transform(), getIntroSkipConfig().minHoldTime, 1, 0.1f, 0.0f, 5.0f);
+    SliderSetting* minSkipTime = AddConfigValueSliderIncrement(container->get_transform(), getIntroSkipConfig().minSkipTime, 0.1f, 2.5f, 10.0f);
+    SliderSetting* minHoldTime = AddConfigValueSliderIncrement(container->get_transform(), getIntroSkipConfig().minHoldTime, 0.1f, 0.0f, 5.0f);
+    auto format = [](float x) { return fmt::format("{:.1f} s", x); };
+    minHoldTime->formatter = format;
+    minSkipTime->formatter = format;
+    ToggleSetting* bothTriggers = AddConfigValueToggle(container->get_transform(), getIntroSkipConfig().bothTriggers);
+
     AddHoverHint(isEnabled->get_gameObject(), "Enable the Intro Skip Mod");
     AddHoverHint(skipIntro->get_gameObject(), "Enable the ability to skip the beginning of songs");
     AddHoverHint(skipMiddle->get_gameObject(), "Enable the ability to skip the middle sections of songs");
     AddHoverHint(skipOutro->get_gameObject(), "Enable the ability to skip the ending of songs");
     AddHoverHint(minSkipTime->get_gameObject(), "Minimum amount of downtime required to be able to skip that section of the song");
     AddHoverHint(minHoldTime->get_gameObject(), "How long you you are required to press the triggers for before it skips");
+    AddHoverHint(bothTriggers->get_gameObject(), "Require both triggers be pressed in order to skip. WHen disabled either trigger will skip");
 }
 
 // Called later on in the game loading - a good time to install function hooks

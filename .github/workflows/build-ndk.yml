@@ -6,8 +6,8 @@ on:
       version:
         description: 'tag name'
         required: true
-      release_msg:
-        description: 'release title'
+      bs_version:
+        description: 'bs version'
         required: true
   pull_request:
     branches:
@@ -97,12 +97,13 @@ jobs:
       id: upload_file_release
       uses: softprops/action-gh-release@v0.1.15
       with:
+        name: Intro Skip ${{ github.event.inputs.version }} for Beat Saber ${{ github.event.inputs.bs_version }} 
         tag_name: ${{ github.event.inputs.version }}
         draft: true
         generate_release_notes: true
         files: |
           ./build/${{ steps.libname.outputs.NAME }}
-          ./build/debug_${{ steps.libname.outputs.NAME }}
+          ./build/debug/debug_${{ steps.libname.outputs.NAME }}
           ./${{ env.qmod_name }}_${{ github.event.inputs.version }}.qmod
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

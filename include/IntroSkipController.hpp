@@ -40,9 +40,11 @@ DECLARE_CLASS_CODEGEN_INTERFACES(IntroSkip, IntroSkipController, Il2CppObject, s
         SkipTimePairs skipTimePairs;
         SkipTimePairs::iterator skipItr;
         float requiredHoldTime, timeHeld;
+        bool requiresBothTriggers;
         TMPro::TextMeshProUGUI* CreateSkipText();
         void setSkipText(bool value);
         void iterateToNextPair();
+        bool triggersPressed();
     )
 
 #undef INTERFACES

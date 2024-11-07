@@ -29,6 +29,7 @@ namespace IntroSkip{
         skipTimePairs = Utils::CalculateSkipTimePairs(_mapData, _audioTimeSyncController->get_songLength());
         skipItr = skipTimePairs.begin();
         requiredHoldTime = getIntroSkipConfig().minHoldTime.GetValue();
+        requiresBothTriggers = getIntroSkipConfig().bothTriggers.GetValue();
         _skipText = CreateSkipText();
         getLogger().info("Initialised IntroSkip Controller");
     }
@@ -43,7 +44,7 @@ namespace IntroSkip{
         if (skipItr == skipTimePairs.end()) return;
 
         float currentTime = _audioTimeSyncController->get_songTime(), bufferedCurrentTime = currentTime + 10 * UnityEngine::Time::get_deltaTime();
-        bool triggersPressed = _leftController->get_triggerValue() > 0.85 && _rightController->get_triggerValue() > 0.85, notPaused = _audioTimeSyncController->get_state() == AudioTimeSyncController::State::Playing;
+        bool triggersPressed = this->triggersPressed(), notPaused = _audioTimeSyncController->get_state() == AudioTimeSyncController::State::Playing;
         float skipStart = skipItr->first, skipEnd = skipItr->second;
 
         if (skipEnd <= bufferedCurrentTime) return iterateToNextPair(); // passed end of skippable range
@@ -73,5 +74,12 @@ namespace IntroSkip{
         setSkipText(false);
         timeHeld = 0;
         skipItr++;
+    }
+
+    bool IntroSkipController::triggersPressed() {
+        bool leftPressed = _leftController->triggerValue > 0.85f;
+        bool rightPressed = _rightController->triggerValue > 0.85f;
+
+        return requiresBothTriggers ? leftPressed && rightPressed : leftPressed || rightPressed;
     }
 }
