@@ -81,7 +81,7 @@ jobs:
     - name: Calculate SHA-256 of the qmod file
       id: qmodsha
       run: |
-        echo "QMOD_SHA=$(sha256sum ./mods/${{ env.qmod_name }}.qmod | grep -Po "^[0-9a-f]+")" >> ${GITHUB_OUTPUT}
+        echo "QMOD_SHA=$(sha256sum ./${{ env.qmod_name }}.qmod | grep -Po "^[0-9a-f]+")" >> ${GITHUB_OUTPUT}
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
