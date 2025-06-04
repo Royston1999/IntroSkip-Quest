@@ -47,7 +47,7 @@ jobs:
       run: |
         cd ${GITHUB_WORKSPACE}
         qpm qmod manifest
-        pwsh -Command ./build.ps1 -no_gimmick
+        pwsh -Command ./build.ps1
     - name: Create Qmod
       run: |
         pwsh -Command ./buildQMOD.ps1 ${{ env.qmod_name }}_${{ github.event.inputs.version }}
