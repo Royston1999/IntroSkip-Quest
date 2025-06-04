@@ -4,7 +4,6 @@
 #include "GlobalNamespace/SliderData.hpp"
 #include "Config.hpp"
 #include <type_traits>
-#include "GlobalNamespace/BeatmapDataSortedListForTypeAndIds_1.hpp"
 
 using namespace GlobalNamespace;
 using namespace System::Collections::Generic;
@@ -16,10 +15,10 @@ namespace IntroSkip::Utils {
 
     template<typename T>
     requires (std::is_convertible_v<T, BeatmapDataItem*>)
-    ArrayW<T> GetBeatmapDataItems(IReadonlyBeatmapData* data) {
-        auto* beatmapDataItems = List_1<T>::New_ctor(reinterpret_cast<BeatmapData*>(data)->_beatmapDataItemsPerTypeAndId->GetItems<T>(0));
-        beatmapDataItems->_items->max_length = beatmapDataItems->_size;
-        return beatmapDataItems->_items;
+    ListW<T> GetBeatmapDataItems(IReadonlyBeatmapData* data) {
+        auto* beatmapDataItems = List_1<T>::New_ctor(reinterpret_cast<BeatmapData*>(data)->GetBeatmapDataItems<T>(0));
+        // auto* beatmapDataItems = List_1<T>::New_ctor(data->GetBeatmapDataItems<T>(0));
+        return ListW<T>(beatmapDataItems);
     };
 
     SkipTimePairs CalculateSkipTimePairs(IReadonlyBeatmapData* beatmapData, float songLength) {

@@ -1,16 +1,19 @@
 {
+  "version": "0.1.0",
   "sharedDir": "shared",
   "dependenciesDir": "extern",
   "info": {
     "name": "Intro Skip",
     "id": "IntroSkip",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "url": null,
     "additionalData": {
       "overrideSoName": "libIntroSkip.so"
     }
   },
   "workspace": {
+    "scripts": {},
+    "ndk": "^27.2.12479018",
     "qmodIncludeDirs": [
       "./build",
       "./extern/libs"
@@ -21,48 +24,44 @@
   "dependencies": [
     {
       "id": "beatsaber-hook",
-      "versionRange": "^5.1.9",
-      "additionalData": {
-        "extraFiles": [
-          "src/inline-hook"
-        ]
-      }
-    },
-    {
-      "id": "lapiz",
-      "versionRange": "^0.2.0",
+      "versionRange": "^6.4.1",
       "additionalData": {}
     },
     {
       "id": "scotland2",
-      "versionRange": "^0.1.4",
+      "versionRange": "^0.1.6",
       "additionalData": {
         "includeQmod": false
       }
     },
     {
       "id": "bs-cordl",
-      "versionRange": "3700.*",
+      "versionRange": "^4005.0.0",
       "additionalData": {}
     },
     {
       "id": "custom-types",
-      "versionRange": "^0.17.0",
+      "versionRange": "^0.18.2",
       "additionalData": {}
     },
     {
       "id": "config-utils",
-      "versionRange": "^1.4.2",
+      "versionRange": "^2.0.2",
       "additionalData": {}
     },
     {
       "id": "bsml",
-      "versionRange": "^0.4.24",
+      "versionRange": "^0.4.51",
       "additionalData": {}
     },
     {
-      "id": "paper",
-      "versionRange": "^3.6.3",
+      "id": "paper2_scotland2",
+      "versionRange": "^4.6.1",
+      "additionalData": {}
+    },
+    {
+      "id": "lapiz",
+      "versionRange": "^0.2.19",
       "additionalData": {}
     }
   ]

@@ -15,12 +15,10 @@
 #include "Utils/IntroSkipUtils.hpp"
 #include "Zenject/ITickable.hpp"
 
-#define INTERFACES                                                        \
-    {                                                                     \
-        classof(System::IDisposable*), classof(Zenject::IInitializable*), classof(Zenject::ITickable*)\
-    }
+#define INTERFACES System::IDisposable*, Zenject::IInitializable*, Zenject::ITickable*
+    
 
-DECLARE_CLASS_CODEGEN_INTERFACES(IntroSkip, IntroSkipController, Il2CppObject, std::vector<Il2CppClass*>(INTERFACES),
+DECLARE_CLASS_CODEGEN_INTERFACES(IntroSkip, IntroSkipController, Il2CppObject, INTERFACES) {
     DECLARE_INSTANCE_FIELD(GlobalNamespace::AudioTimeSyncController*, _audioTimeSyncController);
     DECLARE_INSTANCE_FIELD(TMPro::TextMeshProUGUI*, _skipText);
     DECLARE_INSTANCE_FIELD(GlobalNamespace::IReadonlyBeatmapData*, _mapData);
@@ -33,9 +31,9 @@ DECLARE_CLASS_CODEGEN_INTERFACES(IntroSkip, IntroSkipController, Il2CppObject, s
                 GlobalNamespace::PauseMenuManager* pauseMenuManager,
                 GlobalNamespace::ComboUIController* comboUIController
                 );
-    DECLARE_OVERRIDE_METHOD(void, Initialize, il2cpp_utils::il2cpp_type_check::MetadataGetter<&::Zenject::IInitializable::Initialize>::methodInfo());
-    DECLARE_OVERRIDE_METHOD(void, Dispose, il2cpp_utils::il2cpp_type_check::MetadataGetter<&::System::IDisposable::Dispose>::methodInfo());
-    DECLARE_OVERRIDE_METHOD(void, Tick, il2cpp_utils::il2cpp_type_check::MetadataGetter<&::Zenject::ITickable::Tick>::methodInfo());
+    DECLARE_OVERRIDE_METHOD_MATCH(void, Initialize, &::Zenject::IInitializable::Initialize);
+    DECLARE_OVERRIDE_METHOD_MATCH(void, Dispose, &::System::IDisposable::Dispose);
+    DECLARE_OVERRIDE_METHOD_MATCH(void, Tick, &::Zenject::ITickable::Tick);
     private:
         SkipTimePairs skipTimePairs;
         SkipTimePairs::iterator skipItr;
@@ -45,6 +43,6 @@ DECLARE_CLASS_CODEGEN_INTERFACES(IntroSkip, IntroSkipController, Il2CppObject, s
         void setSkipText(bool value);
         void iterateToNextPair();
         bool triggersPressed();
-    )
+};
 
 #undef INTERFACES

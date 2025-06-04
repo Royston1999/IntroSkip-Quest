@@ -7,7 +7,7 @@
 #include "lapiz/shared/macros.hpp"
 #include "IntroSkipController.hpp"
 
-DECLARE_CLASS_CODEGEN(IntroSkip::Installers, IntroSkipInstaller, ::Zenject::Installer,
-                      DECLARE_OVERRIDE_METHOD(void, InstallBindings, il2cpp_utils::il2cpp_type_check::MetadataGetter<&::Zenject::Installer::InstallBindings>::methodInfo());
-                      DECLARE_DEFAULT_CTOR();
-                      )
+DECLARE_CLASS_CODEGEN(IntroSkip::Installers, IntroSkipInstaller, ::Zenject::Installer) {
+    DECLARE_OVERRIDE_METHOD_MATCH(void, InstallBindings, &::Zenject::Installer::InstallBindings);
+    DECLARE_DEFAULT_CTOR();
+};
