@@ -5,7 +5,7 @@
   "info": {
     "name": "Intro Skip",
     "id": "IntroSkip",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "url": null,
     "additionalData": {
       "overrideSoName": "libIntroSkip.so"
@@ -13,7 +13,7 @@
   },
   "workspace": {
     "scripts": {},
-    "ndk": "^27.2.12479018",
+    "ndk": "^27.3.13750724",
     "qmodIncludeDirs": [
       "./build",
       "./extern/libs"
@@ -36,7 +36,7 @@
     },
     {
       "id": "bs-cordl",
-      "versionRange": "^4007.*",
+      "versionRange": "^4008.*",
       "additionalData": {}
     },
     {
@@ -51,7 +51,7 @@
     },
     {
       "id": "bsml",
-      "versionRange": "^0.4.54",
+      "versionRange": "^0.4.55",
       "additionalData": {}
     },
     {
@@ -61,7 +61,7 @@
     },
     {
       "id": "lapiz",
-      "versionRange": "^0.2.22",
+      "versionRange": "^0.2.23",
       "additionalData": {}
     }
   ]
